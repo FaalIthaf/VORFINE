@@ -46,6 +46,12 @@ export const Colors = {
   filterPillBg: "#E5EAEC",
   historyBadgeBg: "#3A656B",
 
+  // Notification Theme Colors
+  notificationBgDark: "#D0D7D9",
+  notificationBgLight: "#FFFFFF",
+  notificationCardBg: "#42767D",
+  notificationCardBorder: "#31545A",
+
   // Status & Checkbox
   successGreen: "#27AE60",
   successGreenDark: "#1E8449",

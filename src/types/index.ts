@@ -39,3 +39,11 @@ export interface TransactionItem {
   balance: string;
   type: TransactionType;
 }
+
+export interface NotificationItem {
+  id: string;
+  message: string;
+  time: string;
+  isRead: boolean;
+  category?: string;
+}

@@ -122,10 +122,7 @@ export const HomeScreen: React.FC = () => {
   };
 
   const handleNotificationPress = () => {
-    Alert.alert(
-      "Notifikasi VORFÍNE",
-      "Tidak ada notifikasi penting saat ini. Semua jadwal & keuangan terkendali.",
-    );
+    router.push("/notifications" as any);
   };
 
   const handleDailyExpenseDropdown = () => {
@@ -164,6 +161,7 @@ export const HomeScreen: React.FC = () => {
         currentProfileName={currentProfile.name}
         onPressProfile={() => setIsProfileModalVisible(true)}
         onPressNotification={handleNotificationPress}
+        hasUnreadNotification={true}
       />
 
       {/* Scrollable Content */}
