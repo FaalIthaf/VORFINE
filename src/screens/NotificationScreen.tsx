@@ -1,20 +1,25 @@
 import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
-  Alert,
-  Platform,
-  RefreshControl,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  ToastAndroid,
-  View,
+    Alert,
+    Platform,
+    RefreshControl,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    ToastAndroid,
+    View,
 } from "react-native";
 import { NotificationCard } from "../components/NotificationCard";
 import { NotificationFilterBar } from "../components/NotificationFilterBar";
 import { NotificationHeader } from "../components/NotificationHeader";
-import { BorderRadius, Colors, MaxContentWidth, Spacing } from "../constants/theme";
+import {
+    BorderRadius,
+    Colors,
+    MaxContentWidth,
+    Spacing,
+} from "../constants/theme";
 import { NotificationItem } from "../types";
 
 export const NotificationScreen: React.FC = () => {
@@ -124,26 +129,22 @@ export const NotificationScreen: React.FC = () => {
       ? "Tandai Belum Dibaca"
       : "Tandai Sudah Dibaca";
 
-    Alert.alert(
-      "Detail Notifikasi",
-      item.message,
-      [
-        {
-          text: actionLabel,
-          onPress: () => {
-            setNotifications((prev) =>
-              prev.map((notif) =>
-                notif.id === item.id
-                  ? { ...notif, isRead: !notif.isRead }
-                  : notif,
-              ),
-            );
-            showFeedback(`Status notifikasi diperbarui.`);
-          },
+    Alert.alert("Detail Notifikasi", item.message, [
+      {
+        text: actionLabel,
+        onPress: () => {
+          setNotifications((prev) =>
+            prev.map((notif) =>
+              notif.id === item.id
+                ? { ...notif, isRead: !notif.isRead }
+                : notif,
+            ),
+          );
+          showFeedback(`Status notifikasi diperbarui.`);
         },
-        { text: "Tutup", style: "cancel" },
-      ],
-    );
+      },
+      { text: "Tutup", style: "cancel" },
+    ]);
   };
 
   const onRefresh = React.useCallback(() => {
