@@ -27,3 +27,15 @@ export interface FinanceData {
 }
 
 export type TabType = "home" | "finance" | "schedule" | "menu";
+
+export type TransactionType = "income" | "expense";
+
+export interface TransactionItem {
+  id: string;
+  title: string;
+  note?: string;
+  date: string;
+  amount: string;
+  balance: string;
+  type: TransactionType;
+}

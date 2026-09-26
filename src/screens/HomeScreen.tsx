@@ -9,6 +9,7 @@ import {
     ToastAndroid,
     View,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { BalanceCard } from "../components/BalanceCard";
 import { BottomNavBar } from "../components/BottomNavBar";
 import { FinanceSummary } from "../components/FinanceSummary";
@@ -20,6 +21,8 @@ import { Colors, Spacing } from "../constants/theme";
 import { Profile, ScheduleItem, TabType } from "../types";
 
 export const HomeScreen: React.FC = () => {
+  const router = useRouter();
+
   // Profiles State
   const [profiles, setProfiles] = useState<Profile[]>([
     { id: "1", name: "Muhammad Ivan Fadholli", isCurrent: true },
@@ -39,8 +42,8 @@ export const HomeScreen: React.FC = () => {
   // Financial Amounts State
   const [totalBalance, setTotalBalance] = useState<number>(300000);
   const [dailyExpense, setDailyExpense] = useState<number>(100000);
-  const [monthlyIncome, setMonthlyIncome] = useState<number>(0);
-  const [monthlyExpense, setMonthlyExpense] = useState<number>(0);
+  const [monthlyIncome, setMonthlyIncome] = useState<number>(3700000);
+  const [monthlyExpense, setMonthlyExpense] = useState<number>(350000);
 
   // Schedule Items State
   const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>([
@@ -200,8 +203,8 @@ export const HomeScreen: React.FC = () => {
           incomeAmount={monthlyIncome}
           expenseAmount={monthlyExpense}
           monthName="September"
-          onPressIncome={handleToggleDemoFinance}
-          onPressExpense={handleToggleDemoFinance}
+          onPressIncome={() => router.push("/income" as any)}
+          onPressExpense={() => router.push("/expense" as any)}
         />
 
         {/* Schedule Section */}
@@ -239,7 +242,29 @@ export const HomeScreen: React.FC = () => {
       />
 
       {/* Bottom Navigation Bar */}
-      <BottomNavBar activeTab={activeTab} onSelectTab={setActiveTab} />
+      <BottomNavBar
+        activeTab={activeTab}
+        onSelectTab={(tab) => {
+          setActiveTab(tab);
+          if (tab === "finance") {
+            Alert.alert(
+              "Detail Keuangan VORFÍNE",
+              "Pilih halaman rincian transaksi:",
+              [
+                {
+                  text: "Pemasukkan",
+                  onPress: () => router.push("/income" as any),
+                },
+                {
+                  text: "Pengeluaran",
+                  onPress: () => router.push("/expense" as any),
+                },
+                { text: "Batal", style: "cancel" },
+              ]
+            );
+          }
+        }}
+      />
     </View>
   );
 };
