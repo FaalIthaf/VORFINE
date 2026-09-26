@@ -1,3 +1,4 @@
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
     Alert,
@@ -9,7 +10,6 @@ import {
     ToastAndroid,
     View,
 } from "react-native";
-import { useRouter } from "expo-router";
 import { BalanceCard } from "../components/BalanceCard";
 import { BottomNavBar } from "../components/BottomNavBar";
 import { FinanceSummary } from "../components/FinanceSummary";
@@ -260,7 +260,7 @@ export const HomeScreen: React.FC = () => {
                   onPress: () => router.push("/expense" as any),
                 },
                 { text: "Batal", style: "cancel" },
-              ]
+              ],
             );
           }
         }}

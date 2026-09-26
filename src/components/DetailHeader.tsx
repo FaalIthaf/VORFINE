@@ -1,12 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    Platform,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors, Spacing } from "../constants/theme";

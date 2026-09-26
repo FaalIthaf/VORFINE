@@ -1,21 +1,26 @@
 import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
-  Alert,
-  Platform,
-  RefreshControl,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  ToastAndroid,
-  View,
+    Alert,
+    Platform,
+    RefreshControl,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    ToastAndroid,
+    View,
 } from "react-native";
 import { DetailHeader } from "../components/DetailHeader";
 import { DetailSummaryCard } from "../components/DetailSummaryCard";
 import { PeriodFilter } from "../components/PeriodFilter";
 import { TransactionItemCard } from "../components/TransactionItemCard";
-import { BorderRadius, Colors, MaxContentWidth, Spacing } from "../constants/theme";
+import {
+    BorderRadius,
+    Colors,
+    MaxContentWidth,
+    Spacing,
+} from "../constants/theme";
 import { TransactionItem } from "../types";
 
 export const ExpenseDetailScreen: React.FC = () => {
@@ -87,28 +92,24 @@ export const ExpenseDetailScreen: React.FC = () => {
   };
 
   const handleFilterPeriodPress = () => {
-    Alert.alert(
-      "Pilih Periode Transaksi",
-      "Pilih filter periode:",
-      [
-        {
-          text: "Bulan Ini (Sep 2026)",
-          onPress: () =>
-            setSelectedPeriod({ label: "Bulan Ini", period: "Sep 2026" }),
-        },
-        {
-          text: "Bulan Lalu (Agu 2026)",
-          onPress: () =>
-            setSelectedPeriod({ label: "Bulan Lalu", period: "Agu 2026" }),
-        },
-        {
-          text: "Tahun Ini (2026)",
-          onPress: () =>
-            setSelectedPeriod({ label: "Tahun Ini", period: "2026" }),
-        },
-        { text: "Batal", style: "cancel" },
-      ],
-    );
+    Alert.alert("Pilih Periode Transaksi", "Pilih filter periode:", [
+      {
+        text: "Bulan Ini (Sep 2026)",
+        onPress: () =>
+          setSelectedPeriod({ label: "Bulan Ini", period: "Sep 2026" }),
+      },
+      {
+        text: "Bulan Lalu (Agu 2026)",
+        onPress: () =>
+          setSelectedPeriod({ label: "Bulan Lalu", period: "Agu 2026" }),
+      },
+      {
+        text: "Tahun Ini (2026)",
+        onPress: () =>
+          setSelectedPeriod({ label: "Tahun Ini", period: "2026" }),
+      },
+      { text: "Batal", style: "cancel" },
+    ]);
   };
 
   const onRefresh = React.useCallback(() => {
@@ -193,7 +194,9 @@ export const ExpenseDetailScreen: React.FC = () => {
                     balance={item.balance}
                     type="expense"
                     onPress={() =>
-                      showFeedback(`Detail transaksi: ${item.title} (${item.amount})`)
+                      showFeedback(
+                        `Detail transaksi: ${item.title} (${item.amount})`,
+                      )
                     }
                   />
                 ))
