@@ -52,6 +52,12 @@ export const Colors = {
   notificationCardBg: "#42767D",
   notificationCardBorder: "#31545A",
 
+  // Transaction Screen Tab Colors
+  tabIncomeGreen: "#43A047",
+  tabExpenseRed: "#E53935",
+  formBorderTeal: "#3B6F75",
+  formLineGrey: "#8CA5A8",
+
   // Status & Checkbox
   successGreen: "#27AE60",
   successGreenDark: "#1E8449",

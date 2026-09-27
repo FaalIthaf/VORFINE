@@ -245,21 +245,7 @@ export const HomeScreen: React.FC = () => {
         onSelectTab={(tab) => {
           setActiveTab(tab);
           if (tab === "finance") {
-            Alert.alert(
-              "Detail Keuangan VORFÍNE",
-              "Pilih halaman rincian transaksi:",
-              [
-                {
-                  text: "Pemasukkan",
-                  onPress: () => router.push("/income" as any),
-                },
-                {
-                  text: "Pengeluaran",
-                  onPress: () => router.push("/expense" as any),
-                },
-                { text: "Batal", style: "cancel" },
-              ],
-            );
+            router.push("/transaction" as any);
           }
         }}
       />
