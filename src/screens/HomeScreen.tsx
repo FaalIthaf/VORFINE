@@ -19,6 +19,7 @@ import { QuickActions } from "../components/QuickActions";
 import { ScheduleSection } from "../components/ScheduleSection";
 import { Colors, Spacing } from "../constants/theme";
 import { Profile, ScheduleItem, TabType } from "../types";
+import { InfoScreen } from "./InfoScreen";
 
 export const HomeScreen: React.FC = () => {
   const router = useRouter();
@@ -164,70 +165,84 @@ export const HomeScreen: React.FC = () => {
         hasUnreadNotification={true}
       />
 
-      {/* Scrollable Content */}
-      <ScrollView
-        style={styles.scrollArea}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[Colors.primary]}
-            tintColor={Colors.primary}
+      {/* Dynamic Content based on Active Tab */}
+      {activeTab === "menu" ? (
+        <View style={{ flex: 1 }}>
+          <InfoScreen
+            showHeader={false}
+            showBottomNav={false}
+            currentProfileName={currentProfile.name}
+            onPressProfile={() => setIsProfileModalVisible(true)}
+            onPressNotification={handleNotificationPress}
+            hasUnreadNotification={true}
           />
-        }
-      >
-        {/* Card 1: Total Saldo */}
-        <BalanceCard
-          title="Total Saldo"
-          amount={totalBalance}
-          isMasked={isTotalBalanceMasked}
-          onToggleMask={() => setIsTotalBalanceMasked((prev) => !prev)}
-        />
-
-        {/* Card 2: Pengeluaran Harian */}
-        <BalanceCard
-          title="Pengeluaran Harian"
-          amount={dailyExpense}
-          isMasked={isDailyExpenseMasked}
-          onToggleMask={() => setIsDailyExpenseMasked((prev) => !prev)}
-          hasDropdown={true}
-          onPressDropdown={handleDailyExpenseDropdown}
-        />
-
-        {/* Financial Summary: Pemasukan & Pengeluaran (September) */}
-        <FinanceSummary
-          incomeAmount={monthlyIncome}
-          expenseAmount={monthlyExpense}
-          monthName="September"
-          onPressIncome={() => router.push("/income" as any)}
-          onPressExpense={() => router.push("/expense" as any)}
-        />
-
-        {/* Schedule Section */}
-        <ScheduleSection
-          currentDateText="Jum'at, 18 September 2026"
-          items={scheduleItems}
-          onToggleComplete={handleToggleScheduleItem}
-          onPressDateDropdown={() =>
-            Alert.alert(
-              "Pilih Tanggal",
-              "Kalender jadwal harian September 2026",
-            )
+        </View>
+      ) : (
+        /* Scrollable Content */
+        <ScrollView
+          style={styles.scrollArea}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[Colors.primary]}
+              tintColor={Colors.primary}
+            />
           }
-        />
+        >
+          {/* Card 1: Total Saldo */}
+          <BalanceCard
+            title="Total Saldo"
+            amount={totalBalance}
+            isMasked={isTotalBalanceMasked}
+            onToggleMask={() => setIsTotalBalanceMasked((prev) => !prev)}
+          />
 
-        {/* Pintasan (Quick Actions) */}
-        <QuickActions
-          onPressScheduleShortcut={() =>
-            showFeedback("Pintasan: Membuka agenda jadwal harian")
-          }
-          onPressTimerShortcut={() =>
-            showFeedback("Pintasan: Membuka stopwatch / pengingat aktivitas")
-          }
-        />
-      </ScrollView>
+          {/* Card 2: Pengeluaran Harian */}
+          <BalanceCard
+            title="Pengeluaran Harian"
+            amount={dailyExpense}
+            isMasked={isDailyExpenseMasked}
+            onToggleMask={() => setIsDailyExpenseMasked((prev) => !prev)}
+            hasDropdown={true}
+            onPressDropdown={handleDailyExpenseDropdown}
+          />
+
+          {/* Financial Summary: Pemasukan & Pengeluaran (September) */}
+          <FinanceSummary
+            incomeAmount={monthlyIncome}
+            expenseAmount={monthlyExpense}
+            monthName="September"
+            onPressIncome={() => router.push("/income" as any)}
+            onPressExpense={() => router.push("/expense" as any)}
+          />
+
+          {/* Schedule Section */}
+          <ScheduleSection
+            currentDateText="Jum'at, 18 September 2026"
+            items={scheduleItems}
+            onToggleComplete={handleToggleScheduleItem}
+            onPressDateDropdown={() =>
+              Alert.alert(
+                "Pilih Tanggal",
+                "Kalender jadwal harian September 2026",
+              )
+            }
+          />
+
+          {/* Pintasan (Quick Actions) */}
+          <QuickActions
+            onPressScheduleShortcut={() =>
+              showFeedback("Pintasan: Membuka agenda jadwal harian")
+            }
+            onPressTimerShortcut={() =>
+              showFeedback("Pintasan: Membuka stopwatch / pengingat aktivitas")
+            }
+          />
+        </ScrollView>
+      )}
 
       {/* Bottom Sheet / Modal: Ganti Profil */}
       <ProfileModal
