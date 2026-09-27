@@ -1,13 +1,13 @@
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  Alert,
-  Platform,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  ToastAndroid,
-  View,
+    Alert,
+    Platform,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    ToastAndroid,
+    View,
 } from "react-native";
 import { BottomNavBar } from "../components/BottomNavBar";
 import { BudgetAlertCard } from "../components/BudgetAlertCard";
@@ -103,16 +103,12 @@ export const TransactionScreen: React.FC = () => {
 
   // Handler Tanggal Transaksi
   const handleDatePress = () => {
-    Alert.alert(
-      "Pilih Tanggal Transaksi",
-      "Pilih opsi tanggal pencatatan:",
-      [
-        { text: "26 Sep 2026", onPress: () => setDate("26 Sep 2026") },
-        { text: "27 Sep 2026", onPress: () => setDate("27 Sep 2026") },
-        { text: "Hari Ini", onPress: () => setDate("27 Sep 2026") },
-        { text: "Batal", style: "cancel" },
-      ],
-    );
+    Alert.alert("Pilih Tanggal Transaksi", "Pilih opsi tanggal pencatatan:", [
+      { text: "26 Sep 2026", onPress: () => setDate("26 Sep 2026") },
+      { text: "27 Sep 2026", onPress: () => setDate("27 Sep 2026") },
+      { text: "Hari Ini", onPress: () => setDate("27 Sep 2026") },
+      { text: "Batal", style: "cancel" },
+    ]);
   };
 
   // Handler Simpan Transaksi
