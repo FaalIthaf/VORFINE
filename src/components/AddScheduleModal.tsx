@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import { BorderRadius, Colors, Spacing } from "../constants/theme";
 import { ScheduleCategory, ScheduleItem } from "../types";
+import { TimeWheelPicker } from "./TimeWheelPicker";
 
 interface AddScheduleModalProps {
   visible: boolean;
@@ -57,6 +58,9 @@ export const AddScheduleModal: React.FC<AddScheduleModalProps> = ({
   const [endTimeText, setEndTimeText] = useState("16.00 WIB");
   const [scheduleDateText, setScheduleDateText] =
     useState(defaultFormattedDate);
+  const [timePickerTarget, setTimePickerTarget] = useState<
+    "start" | "end" | null
+  >(null);
 
   // Alarm & Reminders
   const [alarmEnabled, setAlarmEnabled] = useState(true);
@@ -69,6 +73,7 @@ export const AddScheduleModal: React.FC<AddScheduleModalProps> = ({
     setActivityDescription("");
     setSelectedCategory("Rutinitas");
     setIsReminderPickerOpen(false);
+    setTimePickerTarget(null);
     onClose();
   };
 
@@ -145,39 +150,14 @@ export const AddScheduleModal: React.FC<AddScheduleModalProps> = ({
                             styles.pickerCard,
                             pressed && styles.pressedState,
                           ]}
-                          onPress={() => {
-                            Alert.alert(
-                              "Pilih Waktu Mulai",
-                              "Pilih jam mulai jadwal:",
-                              [
-                                {
-                                  text: "05.00 WIB",
-                                  onPress: () => setStartTimeText("05.00 WIB"),
-                                },
-                                {
-                                  text: "07.00 WIB",
-                                  onPress: () => setStartTimeText("07.00 WIB"),
-                                },
-                                {
-                                  text: "08.00 WIB",
-                                  onPress: () => setStartTimeText("08.00 WIB"),
-                                },
-                                {
-                                  text: "13.00 WIB",
-                                  onPress: () => setStartTimeText("13.00 WIB"),
-                                },
-                                {
-                                  text: "19.00 WIB",
-                                  onPress: () => setStartTimeText("19.00 WIB"),
-                                },
-                              ],
-                            );
-                          }}
+                          onPress={() => setTimePickerTarget("start")}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Pilih Waktu Mulai. Waktu saat ini: ${startTimeText}`}
                         >
                           <Ionicons
-                            name="calendar-outline"
+                            name="time-outline"
                             size={18}
-                            color={Colors.textPrimary}
+                            color={Colors.primary}
                             style={styles.cardIcon}
                           />
                           <Text style={styles.pickerCardText} numberOfLines={1}>
@@ -199,39 +179,14 @@ export const AddScheduleModal: React.FC<AddScheduleModalProps> = ({
                             styles.pickerCard,
                             pressed && styles.pressedState,
                           ]}
-                          onPress={() => {
-                            Alert.alert(
-                              "Pilih Waktu Selesai",
-                              "Pilih jam selesai jadwal:",
-                              [
-                                {
-                                  text: "06.00 WIB",
-                                  onPress: () => setEndTimeText("06.00 WIB"),
-                                },
-                                {
-                                  text: "07.30 WIB",
-                                  onPress: () => setEndTimeText("07.30 WIB"),
-                                },
-                                {
-                                  text: "12.00 WIB",
-                                  onPress: () => setEndTimeText("12.00 WIB"),
-                                },
-                                {
-                                  text: "16.00 WIB",
-                                  onPress: () => setEndTimeText("16.00 WIB"),
-                                },
-                                {
-                                  text: "21.00 WIB",
-                                  onPress: () => setEndTimeText("21.00 WIB"),
-                                },
-                              ],
-                            );
-                          }}
+                          onPress={() => setTimePickerTarget("end")}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Pilih Waktu Selesai. Waktu saat ini: ${endTimeText}`}
                         >
                           <Ionicons
                             name="time-outline"
                             size={18}
-                            color={Colors.textPrimary}
+                            color={Colors.primary}
                             style={styles.cardIcon}
                           />
                           <Text style={styles.pickerCardText} numberOfLines={1}>
@@ -376,6 +331,27 @@ export const AddScheduleModal: React.FC<AddScheduleModalProps> = ({
               </View>
             </TouchableWithoutFeedback>
           </KeyboardAvoidingView>
+
+          {/* Time Wheel Picker (Alarm Style Drum Picker) */}
+          <TimeWheelPicker
+            visible={timePickerTarget !== null}
+            title={
+              timePickerTarget === "start"
+                ? "Pilih Waktu Mulai"
+                : "Pilih Waktu Selesai"
+            }
+            initialTime={
+              timePickerTarget === "start" ? startTimeText : endTimeText
+            }
+            onClose={() => setTimePickerTarget(null)}
+            onConfirm={(formattedTime) => {
+              if (timePickerTarget === "start") {
+                setStartTimeText(formattedTime);
+              } else {
+                setEndTimeText(formattedTime);
+              }
+            }}
+          />
         </View>
       </TouchableWithoutFeedback>
     </Modal>
@@ -466,6 +442,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 10,
     backgroundColor: Colors.white,
+    ...(Platform.OS === "web" ? { cursor: "pointer" as any } : {}),
   },
   cardIcon: {
     marginRight: 6,
