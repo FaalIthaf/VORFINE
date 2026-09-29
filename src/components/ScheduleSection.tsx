@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { BorderRadius, Colors, Spacing } from "../constants/theme";
 import { ScheduleCategory, ScheduleItem } from "../types";
 
@@ -125,7 +125,17 @@ export const ScheduleSection: React.FC<ScheduleSectionProps> = ({
                             styles.deleteButton,
                             pressed && styles.pressedState,
                           ]}
-                          onPress={() => onDelete(item.id)}
+                          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                          onPress={(e) => {
+                            e?.stopPropagation?.();
+                            onDelete(item.id);
+                          }}
+                          {...({
+                            onClick: (e: any) => {
+                              e?.stopPropagation?.();
+                              onDelete(item.id);
+                            },
+                          } as any)}
                           accessibilityRole="button"
                           accessibilityLabel={`Hapus jadwal ${item.title}`}
                         >
@@ -133,6 +143,7 @@ export const ScheduleSection: React.FC<ScheduleSectionProps> = ({
                             name="trash-outline"
                             size={18}
                             color="#667085"
+                            style={{ pointerEvents: "none" }}
                           />
                         </Pressable>
                       )}
@@ -209,6 +220,7 @@ const styles = StyleSheet.create({
   dateSelector: {
     flexDirection: "row",
     alignItems: "center",
+    ...(Platform.OS === "web" ? { cursor: "pointer" as any } : {}),
   },
   dateText: {
     color: Colors.textPrimary,
@@ -265,6 +277,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    position: "relative",
+    zIndex: 2,
   },
   itemTitle: {
     color: Colors.textPrimary,
@@ -272,6 +286,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     flex: 1,
     marginRight: Spacing.sm,
+    ...(Platform.OS === "web" ? { pointerEvents: "none" as any } : {}),
   },
   itemTitleCompleted: {
     color: "#2C3E50",
@@ -279,21 +294,33 @@ const styles = StyleSheet.create({
   actionsGroup: {
     flexDirection: "row",
     alignItems: "center",
+    position: "relative",
+    zIndex: 99,
+    ...(Platform.OS === "web" ? { pointerEvents: "auto" as any } : {}),
   },
   deleteButton: {
-    padding: 4,
+    padding: 6,
+    minWidth: 36,
+    minHeight: 36,
     justifyContent: "center",
     alignItems: "center",
+    borderRadius: BorderRadius.sm,
+    position: "relative",
+    zIndex: 100,
+    ...(Platform.OS === "web"
+      ? { cursor: "pointer" as any, pointerEvents: "auto" as any }
+      : {}),
   },
   checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 5,
+    width: 24,
+    height: 24,
+    borderRadius: 6,
     borderWidth: 1.5,
     borderColor: "#D0D5DD",
     backgroundColor: Colors.white,
     justifyContent: "center",
     alignItems: "center",
+    ...(Platform.OS === "web" ? { cursor: "pointer" as any } : {}),
   },
   checkboxCompleted: {
     backgroundColor: Colors.successGreen,

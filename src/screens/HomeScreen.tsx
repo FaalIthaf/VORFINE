@@ -15,7 +15,6 @@ import { BottomNavBar } from "../components/BottomNavBar";
 import { FinanceSummary } from "../components/FinanceSummary";
 import { Header } from "../components/Header";
 import { ProfileModal } from "../components/ProfileModal";
-import { QuickActions } from "../components/QuickActions";
 import { ScheduleSection } from "../components/ScheduleSection";
 import { Colors, Spacing } from "../constants/theme";
 import { useApp } from "../context/AppContext";
@@ -159,14 +158,6 @@ export const HomeScreen: React.FC = () => {
             onToggleComplete={toggleCompleteSchedule}
             onPressDateDropdown={() => router.push("/schedule" as any)}
           />
-
-          {/* Pintasan (Quick Actions) */}
-          <QuickActions
-            onPressScheduleShortcut={() => router.push("/schedule" as any)}
-            onPressTimerShortcut={() =>
-              showFeedback("Pintasan: Membuka stopwatch / pengingat aktivitas")
-            }
-          />
         </ScrollView>
       )}
 
@@ -203,7 +194,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.lg,
-    paddingBottom: Spacing.xl,
+    paddingBottom: Spacing.xl + 8,
   },
 });
 

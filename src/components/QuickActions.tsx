@@ -1,6 +1,6 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, StyleSheet, View } from "react-native";
 import { BorderRadius, Colors, Spacing } from "../constants/theme";
 
 interface QuickActionsProps {
@@ -14,8 +14,6 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
 }) => {
   return (
     <View style={styles.sectionContainer}>
-      <Text style={styles.sectionTitle}>Pintasan</Text>
-
       <View style={styles.cardContainer}>
         {/* Shortcut 1: Schedule with checkmark */}
         <Pressable
@@ -58,13 +56,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
 
 const styles = StyleSheet.create({
   sectionContainer: {
-    marginBottom: Spacing.xl + 20,
-  },
-  sectionTitle: {
-    color: Colors.textPrimary,
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: Spacing.sm + 2,
+    marginBottom: Spacing.xl,
   },
   cardContainer: {
     backgroundColor: Colors.tealSlate,
@@ -85,6 +77,7 @@ const styles = StyleSheet.create({
     padding: Spacing.xs,
     justifyContent: "center",
     alignItems: "center",
+    ...(Platform.OS === "web" ? { cursor: "pointer" as any } : {}),
   },
   calendarIconWrapper: {
     position: "relative",
