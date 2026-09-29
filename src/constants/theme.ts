@@ -33,14 +33,26 @@ export const Colors = {
   textLight: "#FFFFFF",
   textLightMuted: "#D0E5E7",
 
-  // Financial Cards
-  incomeBg: "#D4F5DE",
+  // Financial Cards & Badges
+  incomeBg: "#D2F8DF",
   incomeBorder: "#A6E5B7",
-  incomeText: "#1B7B3E",
+  incomeText: "#16803C",
 
-  expenseBg: "#FCE0DF",
+  expenseBg: "#FFD8D8",
   expenseBorder: "#F7B8B5",
-  expenseText: "#C0392B",
+  expenseText: "#C5221F",
+
+  // Detail Page Accents
+  cardBorderSubtle: "#3F6469",
+  statBadgeGreen: "#439B6C",
+  filterPillBg: "#E5EAEC",
+  historyBadgeBg: "#3A656B",
+
+  // Notification Theme Colors
+  notificationBgDark: "#D0D7D9",
+  notificationBgLight: "#FFFFFF",
+  notificationCardBg: "#42767D",
+  notificationCardBorder: "#31545A",
 
   // Status & Checkbox
   successGreen: "#27AE60",
