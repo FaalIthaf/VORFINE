@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
 import { Image, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -88,7 +88,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
           {activeTab === "schedule" && <View style={styles.activeIndicator} />}
         </Pressable>
 
-        {/* Tab 4: Menu / Pengaturan */}
+        {/* Tab 4: Menu / Info & Changelog (Icon Grid 4 Kotak) */}
         <Pressable
           style={({ pressed }) => [
             styles.tabButton,
@@ -97,15 +97,13 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
           onPress={() => onSelectTab("menu")}
           accessibilityRole="tab"
           accessibilityState={{ selected: activeTab === "menu" }}
-          accessibilityLabel="Menu"
+          accessibilityLabel="Menu dan Info Aplikasi"
         >
-          <Image
-            source={require("../../assets/images/tabIcons/SettingsIcon.png")}
-            style={[
-              styles.customSettingsIcon,
-              { opacity: activeTab === "menu" ? 1 : 0.65 },
-            ]}
-            resizeMode="contain"
+          <Ionicons
+            name="grid-outline"
+            size={25}
+            color={Colors.white}
+            style={{ opacity: activeTab === "menu" ? 1 : 0.65 }}
           />
           {activeTab === "menu" && <View style={styles.activeIndicator} />}
         </Pressable>
