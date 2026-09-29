@@ -40,7 +40,9 @@ export const ScheduleSection: React.FC<ScheduleSectionProps> = ({
 
   return (
     <View style={styles.outerWrapper}>
-      {sectionTitle && <Text style={styles.sectionHeaderTitle}>{sectionTitle}</Text>}
+      {sectionTitle && (
+        <Text style={styles.sectionHeaderTitle}>{sectionTitle}</Text>
+      )}
 
       <View style={styles.container}>
         {/* Schedule Header */}
@@ -72,7 +74,9 @@ export const ScheduleSection: React.FC<ScheduleSectionProps> = ({
         {items.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="calendar-outline" size={32} color="#98A2B3" />
-            <Text style={styles.emptyText}>Belum ada jadwal untuk tanggal ini.</Text>
+            <Text style={styles.emptyText}>
+              Belum ada jadwal untuk tanggal ini.
+            </Text>
           </View>
         ) : (
           <View style={styles.itemsList}>
@@ -93,7 +97,9 @@ export const ScheduleSection: React.FC<ScheduleSectionProps> = ({
                         },
                       ]}
                     >
-                      <Text style={[styles.categoryText, { color: catStyle.text }]}>
+                      <Text
+                        style={[styles.categoryText, { color: catStyle.text }]}
+                      >
                         {item.category}
                       </Text>
                     </View>
@@ -123,7 +129,11 @@ export const ScheduleSection: React.FC<ScheduleSectionProps> = ({
                           accessibilityRole="button"
                           accessibilityLabel={`Hapus jadwal ${item.title}`}
                         >
-                          <Ionicons name="trash-outline" size={18} color="#667085" />
+                          <Ionicons
+                            name="trash-outline"
+                            size={18}
+                            color="#667085"
+                          />
                         </Pressable>
                       )}
 

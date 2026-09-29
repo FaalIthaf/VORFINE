@@ -1,7 +1,7 @@
-import React from "react";
-import { StyleSheet, Text, View, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Colors, Spacing, BorderRadius } from "../constants/theme";
+import React from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { BorderRadius, Colors, Spacing } from "../constants/theme";
 
 interface CalendarWidgetProps {
   currentYear: number;
@@ -25,7 +25,11 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
   monthName,
 }) => {
   // Compute days in current month
-  const daysInCurrentMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const daysInCurrentMonth = new Date(
+    currentYear,
+    currentMonth + 1,
+    0,
+  ).getDate();
   // First day of current month (0 = Sunday, 1 = Monday, etc.)
   const firstDayOfWeek = new Date(currentYear, currentMonth, 1).getDay();
   // Days in previous month
@@ -58,7 +62,8 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
 
   // 3. Trailing days for next month (fill to multiple of 7, min 35 cells)
   const remainingCells = 35 - gridCells.length;
-  const fillCount = remainingCells > 0 ? remainingCells : (42 - gridCells.length) % 7;
+  const fillCount =
+    remainingCells > 0 ? remainingCells : (42 - gridCells.length) % 7;
   for (let day = 1; day <= fillCount; day++) {
     gridCells.push({
       day,
@@ -72,7 +77,10 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
       {/* Month Navigator Header */}
       <View style={styles.headerRow}>
         <Pressable
-          style={({ pressed }) => [styles.arrowButton, pressed && styles.pressedState]}
+          style={({ pressed }) => [
+            styles.arrowButton,
+            pressed && styles.pressedState,
+          ]}
           onPress={onPrevMonth}
           accessibilityRole="button"
           accessibilityLabel="Bulan Sebelumnya"
@@ -85,12 +93,19 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
         </Text>
 
         <Pressable
-          style={({ pressed }) => [styles.arrowButton, pressed && styles.pressedState]}
+          style={({ pressed }) => [
+            styles.arrowButton,
+            pressed && styles.pressedState,
+          ]}
           onPress={onNextMonth}
           accessibilityRole="button"
           accessibilityLabel="Bulan Berikutnya"
         >
-          <Ionicons name="chevron-forward" size={18} color={Colors.textPrimary} />
+          <Ionicons
+            name="chevron-forward"
+            size={18}
+            color={Colors.textPrimary}
+          />
         </Pressable>
       </View>
 

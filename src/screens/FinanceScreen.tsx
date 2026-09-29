@@ -1,21 +1,21 @@
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  StyleSheet,
-  View,
+  Alert,
+  Platform,
+  Pressable,
   ScrollView,
   StatusBar,
+  StyleSheet,
   Text,
-  Pressable,
   TextInput,
-  Alert,
   ToastAndroid,
-  Platform,
+  View,
 } from "react-native";
-import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { Colors, Spacing, BorderRadius } from "../constants/theme";
-import { useApp } from "../context/AppContext";
 import { BottomNavBar } from "../components/BottomNavBar";
+import { BorderRadius, Colors, Spacing } from "../constants/theme";
+import { useApp } from "../context/AppContext";
 import { TabType } from "../types";
 
 export const FinanceScreen: React.FC = () => {
@@ -30,10 +30,10 @@ export const FinanceScreen: React.FC = () => {
   // Budget Edit State
   const [isEditingBudget, setIsEditingBudget] = useState(false);
   const [tempDailyBudget, setTempDailyBudget] = useState(
-    financeData.dailyBudget.toString()
+    financeData.dailyBudget.toString(),
   );
   const [tempMonthlyBudget, setTempMonthlyBudget] = useState(
-    financeData.monthlyBudget.toString()
+    financeData.monthlyBudget.toString(),
   );
 
   const showFeedback = (msg: string) => {
@@ -51,13 +51,19 @@ export const FinanceScreen: React.FC = () => {
   // Calculations for Budget Alert System
   const dailySpent = financeData.dailyExpense;
   const dailyLimit = financeData.dailyBudget;
-  const dailyPercentage = Math.min(Math.round((dailySpent / (dailyLimit || 1)) * 100), 100);
+  const dailyPercentage = Math.min(
+    Math.round((dailySpent / (dailyLimit || 1)) * 100),
+    100,
+  );
   const isDailyOver = dailySpent >= dailyLimit;
   const isDailyNear = dailySpent >= dailyLimit * 0.8 && !isDailyOver;
 
   const monthlySpent = financeData.monthlyExpense;
   const monthlyLimit = financeData.monthlyBudget;
-  const monthlyPercentage = Math.min(Math.round((monthlySpent / (monthlyLimit || 1)) * 100), 100);
+  const monthlyPercentage = Math.min(
+    Math.round((monthlySpent / (monthlyLimit || 1)) * 100),
+    100,
+  );
   const isMonthlyOver = monthlySpent >= monthlyLimit;
   const isMonthlyNear = monthlySpent >= monthlyLimit * 0.8 && !isMonthlyOver;
 
@@ -69,7 +75,10 @@ export const FinanceScreen: React.FC = () => {
       return;
     }
     if (isNaN(amountNum) || amountNum <= 0) {
-      Alert.alert("Perhatian", "Silakan masukkan nominal transaksi yang valid.");
+      Alert.alert(
+        "Perhatian",
+        "Silakan masukkan nominal transaksi yang valid.",
+      );
       return;
     }
 
@@ -79,13 +88,17 @@ export const FinanceScreen: React.FC = () => {
         monthlyExpense: financeData.monthlyExpense + amountNum,
         totalBalance: Math.max(0, financeData.totalBalance - amountNum),
       });
-      showFeedback(`Pengeluaran sebesar ${formatRupiah(amountNum)} berhasil dicatat!`);
+      showFeedback(
+        `Pengeluaran sebesar ${formatRupiah(amountNum)} berhasil dicatat!`,
+      );
     } else {
       updateFinanceData({
         monthlyIncome: financeData.monthlyIncome + amountNum,
         totalBalance: financeData.totalBalance + amountNum,
       });
-      showFeedback(`Pemasukkan sebesar ${formatRupiah(amountNum)} berhasil dicatat!`);
+      showFeedback(
+        `Pemasukkan sebesar ${formatRupiah(amountNum)} berhasil dicatat!`,
+      );
     }
 
     setTransTitle("");
@@ -149,7 +162,9 @@ export const FinanceScreen: React.FC = () => {
           <View style={[styles.alertBanner, styles.alertBannerDanger]}>
             <Ionicons name="alert-circle" size={24} color="#C0392B" />
             <View style={styles.alertTextWrapper}>
-              <Text style={styles.alertBannerTitle}>Peringatan Batas Anggaran!</Text>
+              <Text style={styles.alertBannerTitle}>
+                Peringatan Batas Anggaran!
+              </Text>
               <Text style={styles.alertBannerDesc}>
                 {isDailyOver
                   ? "Pengeluaran harian telah melampaui limit anggaran harian Anda."
@@ -165,7 +180,8 @@ export const FinanceScreen: React.FC = () => {
                 Mendekati Batas Budget (80%)
               </Text>
               <Text style={styles.alertBannerDesc}>
-                Perhatikan pengeluaran harian Anda agar tidak melebihi anggaran yang ditetapkan.
+                Perhatikan pengeluaran harian Anda agar tidak melebihi anggaran
+                yang ditetapkan.
               </Text>
             </View>
           </View>
@@ -179,7 +195,11 @@ export const FinanceScreen: React.FC = () => {
           >
             <View style={styles.quickLinkHeader}>
               <Text style={styles.quickLinkLabel}>Pemasukan</Text>
-              <Ionicons name="arrow-forward" size={16} color={Colors.incomeText} />
+              <Ionicons
+                name="arrow-forward"
+                size={16}
+                color={Colors.incomeText}
+              />
             </View>
             <Text style={styles.quickLinkAmount}>
               {formatRupiah(financeData.monthlyIncome)}
@@ -192,7 +212,11 @@ export const FinanceScreen: React.FC = () => {
           >
             <View style={styles.quickLinkHeader}>
               <Text style={styles.quickLinkLabel}>Pengeluaran</Text>
-              <Ionicons name="arrow-forward" size={16} color={Colors.expenseText} />
+              <Ionicons
+                name="arrow-forward"
+                size={16}
+                color={Colors.expenseText}
+              />
             </View>
             <Text style={styles.quickLinkAmount}>
               {formatRupiah(financeData.monthlyExpense)}
@@ -205,7 +229,9 @@ export const FinanceScreen: React.FC = () => {
           <View style={styles.cardHeaderRow}>
             <View>
               <Text style={styles.cardSectionTitle}>Monitoring Anggaran</Text>
-              <Text style={styles.cardSectionSub}>Bulan {financeData.monthName} 2026</Text>
+              <Text style={styles.cardSectionSub}>
+                Bulan {financeData.monthName} 2026
+              </Text>
             </View>
             <Pressable
               style={styles.editBudgetButton}
@@ -233,8 +259,13 @@ export const FinanceScreen: React.FC = () => {
                 value={tempMonthlyBudget}
                 onChangeText={setTempMonthlyBudget}
               />
-              <Pressable style={styles.saveBudgetBtn} onPress={handleSaveBudget}>
-                <Text style={styles.saveBudgetBtnText}>Simpan Pengaturan Budget</Text>
+              <Pressable
+                style={styles.saveBudgetBtn}
+                onPress={handleSaveBudget}
+              >
+                <Text style={styles.saveBudgetBtnText}>
+                  Simpan Pengaturan Budget
+                </Text>
               </Pressable>
             </View>
           ) : (
@@ -244,7 +275,8 @@ export const FinanceScreen: React.FC = () => {
                 <View style={styles.progressHeader}>
                   <Text style={styles.progressLabel}>Budget Harian</Text>
                   <Text style={styles.progressValues}>
-                    {formatRupiah(dailySpent)} / {formatRupiah(dailyLimit)} ({dailyPercentage}%)
+                    {formatRupiah(dailySpent)} / {formatRupiah(dailyLimit)} (
+                    {dailyPercentage}%)
                   </Text>
                 </View>
                 <View style={styles.progressBarBg}>
@@ -253,7 +285,11 @@ export const FinanceScreen: React.FC = () => {
                       styles.progressBarFill,
                       {
                         width: `${dailyPercentage}%`,
-                        backgroundColor: isDailyOver ? "#E74C3C" : isDailyNear ? "#F39C12" : "#2ECC71",
+                        backgroundColor: isDailyOver
+                          ? "#E74C3C"
+                          : isDailyNear
+                            ? "#F39C12"
+                            : "#2ECC71",
                       },
                     ]}
                   />
@@ -265,7 +301,8 @@ export const FinanceScreen: React.FC = () => {
                 <View style={styles.progressHeader}>
                   <Text style={styles.progressLabel}>Budget Bulanan</Text>
                   <Text style={styles.progressValues}>
-                    {formatRupiah(monthlySpent)} / {formatRupiah(monthlyLimit)} ({monthlyPercentage}%)
+                    {formatRupiah(monthlySpent)} / {formatRupiah(monthlyLimit)}{" "}
+                    ({monthlyPercentage}%)
                   </Text>
                 </View>
                 <View style={styles.progressBarBg}>
@@ -274,7 +311,11 @@ export const FinanceScreen: React.FC = () => {
                       styles.progressBarFill,
                       {
                         width: `${monthlyPercentage}%`,
-                        backgroundColor: isMonthlyOver ? "#E74C3C" : isMonthlyNear ? "#F39C12" : "#3498DB",
+                        backgroundColor: isMonthlyOver
+                          ? "#E74C3C"
+                          : isMonthlyNear
+                            ? "#F39C12"
+                            : "#3498DB",
                       },
                     ]}
                   />
@@ -362,7 +403,10 @@ export const FinanceScreen: React.FC = () => {
             />
           </View>
 
-          <Pressable style={styles.submitTransBtn} onPress={handleSaveTransaction}>
+          <Pressable
+            style={styles.submitTransBtn}
+            onPress={handleSaveTransaction}
+          >
             <Text style={styles.submitTransBtnText}>
               Simpan {transType === "expense" ? "Pengeluaran" : "Pemasukan"}
             </Text>

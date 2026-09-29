@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, ReactNode } from "react";
-import { ScheduleItem, ScheduleCategory, Profile, FinanceData, TabType } from "../types";
+import React, { createContext, ReactNode, useContext, useState } from "react";
+import { FinanceData, Profile, ScheduleItem, TabType } from "../types";
 
 export interface AppContextType {
   // Schedules
@@ -67,7 +67,9 @@ const INDONESIAN_MONTHS = [
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const AppProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
   // Navigation State
   const [activeTab, setActiveTab] = useState<TabType>("home");
 
@@ -202,8 +204,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const toggleCompleteSchedule = (id: string) => {
     setSchedules((prev) =>
       prev.map((item) =>
-        item.id === id ? { ...item, completed: !item.completed } : item
-      )
+        item.id === id ? { ...item, completed: !item.completed } : item,
+      ),
     );
   };
 
@@ -222,9 +224,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Profile Actions
   const selectProfile = (id: string) => {
     setSelectedProfileId(id);
-    setProfiles((prev) =>
-      prev.map((p) => ({ ...p, isCurrent: p.id === id }))
-    );
+    setProfiles((prev) => prev.map((p) => ({ ...p, isCurrent: p.id === id })));
   };
 
   const addProfile = (name: string) => {

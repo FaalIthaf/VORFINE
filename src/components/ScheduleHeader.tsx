@@ -1,14 +1,14 @@
+import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
+  Platform,
+  Pressable,
   StyleSheet,
   Text,
-  View,
   TextInput,
-  Pressable,
-  Platform,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
 import { Colors, Spacing } from "../constants/theme";
 
 interface ScheduleHeaderProps {
@@ -25,7 +25,12 @@ export const ScheduleHeader: React.FC<ScheduleHeaderProps> = ({
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 12) + 8 }]}>
+    <View
+      style={[
+        styles.headerContainer,
+        { paddingTop: Math.max(insets.top, 12) + 8 },
+      ]}
+    >
       <View style={styles.headerRow}>
         {/* Back Button */}
         <Pressable

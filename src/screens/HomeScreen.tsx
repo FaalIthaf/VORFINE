@@ -64,7 +64,7 @@ export const HomeScreen: React.FC = () => {
   const handleDailyExpenseDropdown = () => {
     Alert.alert(
       "Filter Pengeluaran Harian",
-      "Pilih rentang waktu:\n• Hari Ini\n• Kemarin\n• 7 Hari Terakhir",
+      "Pilih rentang waktu:\nHari Ini\nKemarin\n7 Hari Terakhir",
     );
   };
 
