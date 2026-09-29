@@ -37,6 +37,7 @@ export const HomeScreen: React.FC = () => {
     currentProfile,
     financeData,
     transactions,
+    filteredSchedules,
     activeTab,
     setActiveTab,
   } = useApp();
@@ -224,7 +225,7 @@ export const HomeScreen: React.FC = () => {
           {/* Schedule Section (Today's Summary) */}
           <ScheduleSection
             currentDateText={formattedSelectedDate}
-            items={schedules.slice(0, 4)}
+            items={filteredSchedules.slice(0, 4)}
             onToggleComplete={toggleCompleteSchedule}
             onPressDateDropdown={() => router.push("/schedule" as any)}
           />

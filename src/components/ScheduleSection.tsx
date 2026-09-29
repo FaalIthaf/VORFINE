@@ -3,6 +3,7 @@ import React from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { BorderRadius, Colors, Spacing } from "../constants/theme";
 import { ScheduleCategory, ScheduleItem } from "../types";
+import { sortSchedulesByTime } from "../utils/scheduleUtils";
 
 export interface ScheduleSectionProps {
   currentDateText: string;
@@ -38,6 +39,11 @@ export const ScheduleSection: React.FC<ScheduleSectionProps> = ({
     }
   };
 
+  // Sort items in ascending chronological order by start time
+  const sortedItems = React.useMemo(() => {
+    return [...items].sort(sortSchedulesByTime);
+  }, [items]);
+
   return (
     <View style={styles.outerWrapper}>
       {sectionTitle && (
@@ -71,7 +77,7 @@ export const ScheduleSection: React.FC<ScheduleSectionProps> = ({
         </View>
 
         {/* Schedule Items List */}
-        {items.length === 0 ? (
+        {sortedItems.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="calendar-outline" size={32} color="#98A2B3" />
             <Text style={styles.emptyText}>
@@ -80,7 +86,7 @@ export const ScheduleSection: React.FC<ScheduleSectionProps> = ({
           </View>
         ) : (
           <View style={styles.itemsList}>
-            {items.map((item) => {
+            {sortedItems.map((item) => {
               const catStyle = getCategoryStyles(item.category);
 
               return (
