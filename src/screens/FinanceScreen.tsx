@@ -20,7 +20,8 @@ import { TabType } from "../types";
 
 export const FinanceScreen: React.FC = () => {
   const router = useRouter();
-  const { financeData, updateFinanceData, setActiveTab } = useApp();
+  const { financeData, updateFinanceData, addTransaction, setActiveTab } =
+    useApp();
 
   // New Transaction Form State
   const [transType, setTransType] = useState<"expense" | "income">("expense");
@@ -82,27 +83,43 @@ export const FinanceScreen: React.FC = () => {
       return;
     }
 
-    if (transType === "expense") {
-      updateFinanceData({
-        dailyExpense: financeData.dailyExpense + amountNum,
-        monthlyExpense: financeData.monthlyExpense + amountNum,
-        totalBalance: Math.max(0, financeData.totalBalance - amountNum),
-      });
-      showFeedback(
-        `Pengeluaran sebesar ${formatRupiah(amountNum)} berhasil dicatat!`,
-      );
-    } else {
-      updateFinanceData({
-        monthlyIncome: financeData.monthlyIncome + amountNum,
-        totalBalance: financeData.totalBalance + amountNum,
-      });
-      showFeedback(
-        `Pemasukkan sebesar ${formatRupiah(amountNum)} berhasil dicatat!`,
-      );
-    }
+    addTransaction({
+      title: transTitle.trim(),
+      note: transType === "expense" ? "Pengeluaran" : "Pemasukan",
+      amount: amountNum,
+      type: transType,
+    });
+
+    const formatted = formatRupiah(amountNum);
+    const typeLabel = transType === "expense" ? "Pengeluaran" : "Pemasukan";
 
     setTransTitle("");
     setTransAmount("");
+
+    Alert.alert(
+      "Transaksi Berhasil Disimpan",
+      `${typeLabel} sebesar ${formatted} berhasil dicatat dengan waktu sekarang dan disinkronkan ke riwayat Dashboard.`,
+      [
+        {
+          text: "Lihat di Dashboard",
+          onPress: () => {
+            setActiveTab("home");
+            router.replace("/" as any);
+          },
+        },
+        {
+          text: "Lihat Riwayat",
+          onPress: () => {
+            if (transType === "income") {
+              router.push("/income" as any);
+            } else {
+              router.push("/expense" as any);
+            }
+          },
+        },
+        { text: "OK", style: "cancel" },
+      ],
+    );
   };
 
   const handleSaveBudget = () => {

@@ -3,10 +3,12 @@ import React, { useState } from "react";
 import {
   Alert,
   Platform,
+  Pressable,
   RefreshControl,
   ScrollView,
   StatusBar,
   StyleSheet,
+  Text,
   ToastAndroid,
   View,
 } from "react-native";
@@ -17,7 +19,8 @@ import { Header } from "../components/Header";
 import { ProfileModal } from "../components/ProfileModal";
 import { QuickActions } from "../components/QuickActions";
 import { ScheduleSection } from "../components/ScheduleSection";
-import { Colors, Spacing } from "../constants/theme";
+import { TransactionItemCard } from "../components/TransactionItemCard";
+import { BorderRadius, Colors, Spacing } from "../constants/theme";
 import { useApp } from "../context/AppContext";
 import { TabType } from "../types";
 import { InfoScreen } from "./InfoScreen";
@@ -34,6 +37,7 @@ export const HomeScreen: React.FC = () => {
     addProfile,
     currentProfile,
     financeData,
+    transactions,
     activeTab,
     setActiveTab,
   } = useApp();
@@ -152,6 +156,72 @@ export const HomeScreen: React.FC = () => {
             onPressExpense={() => router.push("/expense" as any)}
           />
 
+          {/* Riwayat Transaksi Terkini Section */}
+          <View style={styles.recentTransactionsSection}>
+            <View style={styles.sectionHeaderRow}>
+              <View style={styles.sectionTitleWithBadge}>
+                <Text style={styles.sectionTitle}>Riwayat Transaksi</Text>
+                <View style={styles.transCountBadge}>
+                  <Text style={styles.transCountText}>{transactions.length}</Text>
+                </View>
+              </View>
+              <Pressable
+                onPress={() => {
+                  Alert.alert(
+                    "Pilih Mutasi Transaksi",
+                    "Buka rincian riwayat transaksi:",
+                    [
+                      {
+                        text: "Pemasukkan",
+                        onPress: () => router.push("/income" as any),
+                      },
+                      {
+                        text: "Pengeluaran",
+                        onPress: () => router.push("/expense" as any),
+                      },
+                      {
+                        text: "Catat Transaksi",
+                        onPress: () => router.push("/finance" as any),
+                      },
+                      { text: "Batal", style: "cancel" },
+                    ],
+                  );
+                }}
+                hitSlop={8}
+              >
+                <Text style={styles.seeAllText}>Lihat Semua</Text>
+              </Pressable>
+            </View>
+
+            {/* List Transaksi Terbaru */}
+            {transactions.slice(0, 3).map((item) => (
+              <TransactionItemCard
+                key={item.id}
+                title={item.title}
+                note={item.note}
+                date={item.date}
+                amount={item.amount}
+                balance={item.balance}
+                type={item.type}
+                onPress={() => {
+                  if (item.type === "income") {
+                    router.push("/income" as any);
+                  } else {
+                    router.push("/expense" as any);
+                  }
+                }}
+              />
+            ))}
+
+            {transactions.length === 0 && (
+              <View style={styles.emptyTransCard}>
+                <Text style={styles.emptyTransText}>
+                  Belum ada catatan transaksi. Catat melalui menu Keuangan.
+                </Text>
+              </View>
+            )}
+          </View>
+
           {/* Schedule Section (Today's Summary) */}
           <ScheduleSection
             currentDateText={formattedSelectedDate}
@@ -204,6 +274,57 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.lg,
     paddingBottom: Spacing.xl,
+  },
+  recentTransactionsSection: {
+    marginBottom: Spacing.md,
+  },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: Spacing.sm,
+    marginTop: Spacing.xs,
+  },
+  sectionTitleWithBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+  },
+  transCountBadge: {
+    backgroundColor: "#35575C",
+    borderRadius: BorderRadius.round,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  transCountText: {
+    color: Colors.white,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  seeAllText: {
+    fontSize: 12.5,
+    fontWeight: "600",
+    color: Colors.primary,
+  },
+  emptyTransCard: {
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#D5DBDB",
+    marginBottom: Spacing.md,
+  },
+  emptyTransText: {
+    color: Colors.textSecondary,
+    fontSize: 12.5,
+    textAlign: "center",
   },
 });
 

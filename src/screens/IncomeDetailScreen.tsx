@@ -1,78 +1,61 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
-    Alert,
-    Platform,
-    RefreshControl,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    ToastAndroid,
-    View,
+  Alert,
+  Modal,
+  Platform,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  ToastAndroid,
+  View,
 } from "react-native";
 import { DetailHeader } from "../components/DetailHeader";
 import { DetailSummaryCard } from "../components/DetailSummaryCard";
 import { PeriodFilter } from "../components/PeriodFilter";
 import { TransactionItemCard } from "../components/TransactionItemCard";
 import {
-    BorderRadius,
-    Colors,
-    MaxContentWidth,
-    Spacing,
+  BorderRadius,
+  Colors,
+  MaxContentWidth,
+  Spacing,
 } from "../constants/theme";
-import { TransactionItem } from "../types";
+import { useApp } from "../context/AppContext";
+import { PeriodFilterMode } from "../types";
+import {
+  filterTransactionsByPeriod,
+  parseAmountToNumber,
+} from "../utils/dateUtils";
 
 export const IncomeDetailScreen: React.FC = () => {
   const router = useRouter();
+  const { transactions, addTransaction, financeData } = useApp();
+
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [refreshing, setRefreshing] = useState<boolean>(false);
+
+  // Period Filter State (Hari, Bulan, Tahun, Semua)
+  const [filterMode, setFilterMode] = useState<PeriodFilterMode>("month");
   const [selectedPeriod, setSelectedPeriod] = useState<{
     label: string;
     period: string;
+    options?: { year?: number; month?: number; day?: number };
   }>({
     label: "Bulan Ini",
     period: "Sep 2026",
+    options: { year: 2026, month: 8 },
   });
 
-  // Mock data sesuai spesifikasi & mock-up UI
-  const [transactions, setTransactions] = useState<TransactionItem[]>([
-    {
-      id: "inc-1",
-      title: "Saldo Awal",
-      date: "1 Sep 2026",
-      amount: "Rp 300.000,00",
-      balance: "Saldo: 300.000,00",
-      type: "income",
-    },
-    {
-      id: "inc-2",
-      title: "Uang Masuk",
-      note: "Gaji",
-      date: "1 Sept 2026",
-      amount: "Rp 3.400.000,00",
-      balance: "Saldo: 3.700.000,00",
-      type: "income",
-    },
-    {
-      id: "inc-3",
-      title: "Uang Masuk",
-      note: "Gaji",
-      date: "1 Sept 2026",
-      amount: "Rp 3.400.000,00",
-      balance: "Saldo: 3.700.000,00",
-      type: "income",
-    },
-    {
-      id: "inc-4",
-      title: "Uang Masuk",
-      note: "Gaji",
-      date: "1 Sept 2026",
-      amount: "Rp 3.400.000,00",
-      balance: "Saldo: 3.700.000,00",
-      type: "income",
-    },
-  ]);
+  // Modal Tambah Pemasukan
+  const [isAddModalVisible, setIsAddModalVisible] = useState<boolean>(false);
+  const [newTitle, setNewTitle] = useState<string>("");
+  const [newAmount, setNewAmount] = useState<string>("");
+  const [newNote, setNewNote] = useState<string>("");
 
   const showFeedback = (msg: string) => {
     if (Platform.OS === "android") {
@@ -90,40 +73,33 @@ export const IncomeDetailScreen: React.FC = () => {
     }
   };
 
-  const handleFilterPeriodPress = () => {
-    Alert.alert("Pilih Periode Transaksi", "Pilih filter periode:", [
-      {
-        text: "Bulan Ini (Sep 2026)",
-        onPress: () =>
-          setSelectedPeriod({ label: "Bulan Ini", period: "Sep 2026" }),
-      },
-      {
-        text: "Bulan Lalu (Agu 2026)",
-        onPress: () =>
-          setSelectedPeriod({ label: "Bulan Lalu", period: "Agu 2026" }),
-      },
-      {
-        text: "Tahun Ini (2026)",
-        onPress: () =>
-          setSelectedPeriod({ label: "Tahun Ini", period: "2026" }),
-      },
-      { text: "Batal", style: "cancel" },
-    ]);
-  };
-
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
     setTimeout(() => {
       setRefreshing(false);
       showFeedback("Data pemasukan berhasil dimuat ulang");
-    }, 600);
+    }, 500);
   }, []);
 
-  // Filter list berdasarkan pencarian
+  // Filter khusus transaksi pemasukan
+  const incomeTransactions = useMemo(() => {
+    return transactions.filter((item) => item.type === "income");
+  }, [transactions]);
+
+  // Filter berdasarkan periode (Hari, Bulan, Tahun, Semua)
+  const periodFiltered = useMemo(() => {
+    return filterTransactionsByPeriod(
+      incomeTransactions,
+      filterMode,
+      selectedPeriod.options,
+    );
+  }, [incomeTransactions, filterMode, selectedPeriod.options]);
+
+  // Filter berdasarkan kata kunci pencarian
   const filteredTransactions = useMemo(() => {
-    if (!searchQuery.trim()) return transactions;
+    if (!searchQuery.trim()) return periodFiltered;
     const query = searchQuery.toLowerCase();
-    return transactions.filter(
+    return periodFiltered.filter(
       (item) =>
         item.title.toLowerCase().includes(query) ||
         (item.note && item.note.toLowerCase().includes(query)) ||
@@ -131,7 +107,60 @@ export const IncomeDetailScreen: React.FC = () => {
         item.amount.toLowerCase().includes(query) ||
         item.balance.toLowerCase().includes(query),
     );
-  }, [transactions, searchQuery]);
+  }, [periodFiltered, searchQuery]);
+
+  // Hitung total nominal pemasukan dari hasil filter
+  const totalAmount = useMemo(() => {
+    return filteredTransactions.reduce((acc, curr) => {
+      if (curr.numericAmount) return acc + curr.numericAmount;
+      return acc + parseAmountToNumber(curr.amount);
+    }, 0);
+  }, [filteredTransactions]);
+
+  const formatRupiah = (val: number): string => {
+    return "IDR  " + val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") + ",00";
+  };
+
+  const handleSelectMode = (mode: PeriodFilterMode) => {
+    setFilterMode(mode);
+  };
+
+  const handleSelectPeriod = (
+    mode: PeriodFilterMode,
+    label: string,
+    periodText: string,
+    options?: { year?: number; month?: number; day?: number },
+  ) => {
+    setFilterMode(mode);
+    setSelectedPeriod({ label, period: periodText, options });
+  };
+
+  // Simpan Pemasukan Baru
+  const handleSaveNewIncome = () => {
+    const amountNum = parseInt(newAmount.replace(/[^0-9]/g, ""), 10);
+    if (!newTitle.trim()) {
+      Alert.alert("Perhatian", "Silakan masukkan keterangan pemasukan.");
+      return;
+    }
+    if (isNaN(amountNum) || amountNum <= 0) {
+      Alert.alert("Perhatian", "Silakan masukkan nominal pemasukan yang valid.");
+      return;
+    }
+
+    addTransaction({
+      title: newTitle.trim(),
+      amount: amountNum,
+      type: "income",
+      note: newNote.trim() || undefined,
+    });
+
+    setNewTitle("");
+    setNewAmount("");
+    setNewNote("");
+    setIsAddModalVisible(false);
+
+    showFeedback("Pemasukan baru berhasil disimpan dengan stempel waktu real-time!");
+  };
 
   return (
     <View style={styles.rootContainer}>
@@ -158,26 +187,39 @@ export const IncomeDetailScreen: React.FC = () => {
         }
       >
         <View style={styles.responsiveWrapper}>
-          {/* Filter Periode */}
+          {/* Filter Periode (Hari, Bulan, Tahun, Semua) */}
           <PeriodFilter
+            currentMode={filterMode}
             currentLabel={selectedPeriod.label}
             currentPeriodText={selectedPeriod.period}
-            onPress={handleFilterPeriodPress}
+            onSelectMode={handleSelectMode}
+            onSelectPeriod={handleSelectPeriod}
           />
 
           {/* Card Utama Top (Summary Card) */}
           <DetailSummaryCard
             title="Total Pemasukan"
-            amount="IDR  3.700.000,00"
+            amount={formatRupiah(totalAmount)}
             statPercentage="+2% dari bulan lalu"
-            transactionCount={2}
+            transactionCount={filteredTransactions.length}
           />
 
           {/* Riwayat Transaksi Section */}
           <View style={styles.historySection}>
-            {/* Header Badge */}
-            <View style={styles.sectionBadge}>
-              <Text style={styles.sectionBadgeText}>Riwayat Transaksi</Text>
+            <View style={styles.sectionHeaderRow}>
+              {/* Header Badge */}
+              <View style={styles.sectionBadge}>
+                <Text style={styles.sectionBadgeText}>Riwayat Transaksi</Text>
+              </View>
+
+              {/* Tombol Tambah Pemasukan Cepat */}
+              <Pressable
+                style={styles.addBtnSmall}
+                onPress={() => setIsAddModalVisible(true)}
+              >
+                <Ionicons name="add-circle" size={18} color={Colors.white} />
+                <Text style={styles.addBtnSmallText}>Catat Pemasukan</Text>
+              </Pressable>
             </View>
 
             {/* List Transaksi */}
@@ -194,15 +236,24 @@ export const IncomeDetailScreen: React.FC = () => {
                     type="income"
                     onPress={() =>
                       showFeedback(
-                        `Detail transaksi: ${item.title} (${item.amount})`,
+                        `Detail: ${item.title} (${item.amount}) pada ${item.date}`,
                       )
                     }
                   />
                 ))
               ) : (
                 <View style={styles.emptyContainer}>
+                  <Ionicons
+                    name="wallet-outline"
+                    size={40}
+                    color="#A2B4B7"
+                    style={{ marginBottom: 8 }}
+                  />
+                  <Text style={styles.emptyTitle}>Tidak ada transaksi</Text>
                   <Text style={styles.emptyText}>
-                    Tidak ditemukan transaksi dengan kata kunci "{searchQuery}"
+                    {searchQuery.trim()
+                      ? `Tidak ditemukan transaksi dengan kata kunci "${searchQuery}"`
+                      : `Tidak ada pemasukan pada periode ${selectedPeriod.label} (${selectedPeriod.period}).`}
                   </Text>
                 </View>
               )}
@@ -210,6 +261,78 @@ export const IncomeDetailScreen: React.FC = () => {
           </View>
         </View>
       </ScrollView>
+
+      {/* Modal Tambah Pemasukan */}
+      <Modal
+        visible={isAddModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setIsAddModalVisible(false)}
+      >
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => setIsAddModalVisible(false)}
+        >
+          <Pressable
+            style={styles.modalFormCard}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={styles.modalFormHeader}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <Ionicons name="arrow-up-circle" size={24} color="#1E8449" />
+                <Text style={styles.modalFormTitle}>Tambah Pemasukan</Text>
+              </View>
+              <Pressable
+                onPress={() => setIsAddModalVisible(false)}
+                hitSlop={8}
+              >
+                <Ionicons name="close" size={22} color="#7F8C8D" />
+              </Pressable>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Deskripsi / Sumber</Text>
+              <TextInput
+                style={styles.inputField}
+                placeholder="Contoh: Gaji, Bonus, Freelance..."
+                placeholderTextColor="#98A2B3"
+                value={newTitle}
+                onChangeText={setNewTitle}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Nominal (Rp)</Text>
+              <TextInput
+                style={styles.inputField}
+                placeholder="Contoh: 500000"
+                placeholderTextColor="#98A2B3"
+                keyboardType="numeric"
+                value={newAmount}
+                onChangeText={setNewAmount}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Catatan (Opsional)</Text>
+              <TextInput
+                style={styles.inputField}
+                placeholder="Catatan tambahan..."
+                placeholderTextColor="#98A2B3"
+                value={newNote}
+                onChangeText={setNewNote}
+              />
+            </View>
+
+            <Pressable
+              style={styles.submitModalBtn}
+              onPress={handleSaveNewIncome}
+            >
+              <Text style={styles.submitModalBtnText}>Simpan Pemasukan</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 };
@@ -234,19 +357,38 @@ const styles = StyleSheet.create({
   historySection: {
     marginTop: Spacing.sm,
   },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: Spacing.md,
+  },
   sectionBadge: {
     backgroundColor: "#35575C",
     borderRadius: BorderRadius.sm,
     paddingHorizontal: Spacing.md,
     paddingVertical: 5,
     alignSelf: "flex-start",
-    marginBottom: Spacing.md,
   },
   sectionBadgeText: {
     color: Colors.white,
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 0.2,
+  },
+  addBtnSmall: {
+    backgroundColor: "#1E8449",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.md,
+  },
+  addBtnSmallText: {
+    color: Colors.white,
+    fontSize: 12,
+    fontWeight: "700",
   },
   itemsList: {
     width: "100%",
@@ -261,10 +403,78 @@ const styles = StyleSheet.create({
     borderColor: "#D5DBDB",
     marginVertical: Spacing.md,
   },
+  emptyTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+    marginBottom: 4,
+  },
   emptyText: {
     color: Colors.textSecondary,
-    fontSize: 13,
+    fontSize: 12.5,
     textAlign: "center",
+    maxWidth: 280,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: Spacing.lg,
+  },
+  modalFormCard: {
+    width: "100%",
+    maxWidth: 420,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  modalFormHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: Spacing.md,
+  },
+  modalFormTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+  },
+  inputGroup: {
+    marginBottom: Spacing.md,
+  },
+  inputLabel: {
+    fontSize: 12.5,
+    fontWeight: "600",
+    color: Colors.textPrimary,
+    marginBottom: 5,
+  },
+  inputField: {
+    backgroundColor: "#F8F9FA",
+    borderWidth: 1,
+    borderColor: "#D0D5DD",
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 9,
+    fontSize: 13,
+    color: Colors.textPrimary,
+  },
+  submitModalBtn: {
+    backgroundColor: "#1E8449",
+    paddingVertical: 12,
+    borderRadius: BorderRadius.md,
+    alignItems: "center",
+    marginTop: Spacing.xs,
+  },
+  submitModalBtnText: {
+    color: Colors.white,
+    fontWeight: "700",
+    fontSize: 13.5,
   },
 });
 

@@ -45,7 +45,12 @@ export interface TransactionItem {
   amount: string;
   balance: string;
   type: TransactionType;
+  rawDate?: string;
+  timestamp?: number;
+  numericAmount?: number;
 }
+
+export type PeriodFilterMode = "all" | "day" | "month" | "year";
 
 export interface NotificationItem {
   id: string;

@@ -1,5 +1,12 @@
 import React, { createContext, ReactNode, useContext, useState } from "react";
-import { FinanceData, Profile, ScheduleItem, TabType } from "../types";
+import {
+  FinanceData,
+  Profile,
+  ScheduleItem,
+  TabType,
+  TransactionItem,
+  TransactionType,
+} from "../types";
 
 export interface AppContextType {
   // Schedules
@@ -7,6 +14,18 @@ export interface AppContextType {
   addSchedule: (item: Omit<ScheduleItem, "id" | "completed">) => void;
   deleteSchedule: (id: string) => void;
   toggleCompleteSchedule: (id: string) => void;
+
+  // Transactions
+  transactions: TransactionItem[];
+  addTransaction: (item: {
+    title: string;
+    note?: string;
+    amount: number;
+    type: TransactionType;
+    date?: string;
+    rawDate?: string;
+  }) => void;
+  deleteTransaction: (id: string) => void;
 
   // Calendar Date State
   currentYear: number;
@@ -65,6 +84,25 @@ const INDONESIAN_MONTHS = [
   "Desember",
 ];
 
+const INDONESIAN_MONTHS_SHORT = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "Mei",
+  "Jun",
+  "Jul",
+  "Agu",
+  "Sep",
+  "Okt",
+  "Nov",
+  "Des",
+];
+
+export const formatRupiah = (val: number): string => {
+  return "Rp " + val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") + ",00";
+};
+
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({
@@ -99,6 +137,130 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     dailyBudget: 150000,
     monthlyBudget: 2500000,
   });
+
+  // Transactions State
+  const [transactions, setTransactions] = useState<TransactionItem[]>([
+    {
+      id: "inc-2",
+      title: "Uang Masuk",
+      note: "Gaji bulanan",
+      date: "1 Sep 2026, 09:00 WIB",
+      amount: "Rp 3.400.000,00",
+      balance: "Saldo: 3.700.000,00",
+      type: "income",
+      rawDate: "2026-09-01T09:00:00.000Z",
+      timestamp: new Date("2026-09-01T09:00:00.000Z").getTime(),
+      numericAmount: 3400000,
+    },
+    {
+      id: "exp-3",
+      title: "Uang Keluar",
+      note: "beli makan siang",
+      date: "1 Sep 2026, 12:30 WIB",
+      amount: "Rp 50.000,00",
+      balance: "Saldo: 3.650.000,00",
+      type: "expense",
+      rawDate: "2026-09-01T12:30:00.000Z",
+      timestamp: new Date("2026-09-01T12:30:00.000Z").getTime(),
+      numericAmount: 50000,
+    },
+    {
+      id: "exp-2",
+      title: "Uang Keluar",
+      note: "beli barang shopee",
+      date: "1 Sep 2026, 15:45 WIB",
+      amount: "Rp 250.000,00",
+      balance: "Saldo: 3.400.000,00",
+      type: "expense",
+      rawDate: "2026-09-01T15:45:00.000Z",
+      timestamp: new Date("2026-09-01T15:45:00.000Z").getTime(),
+      numericAmount: 250000,
+    },
+    {
+      id: "exp-1",
+      title: "Uang Keluar",
+      note: "beli makan malam",
+      date: "1 Sep 2026, 19:20 WIB",
+      amount: "Rp 50.000,00",
+      balance: "Saldo: 3.350.000,00",
+      type: "expense",
+      rawDate: "2026-09-01T19:20:00.000Z",
+      timestamp: new Date("2026-09-01T19:20:00.000Z").getTime(),
+      numericAmount: 50000,
+    },
+    {
+      id: "inc-1",
+      title: "Saldo Awal",
+      note: "Saldo pembukaan",
+      date: "1 Sep 2026, 08:00 WIB",
+      amount: "Rp 300.000,00",
+      balance: "Saldo: 300.000,00",
+      type: "income",
+      rawDate: "2026-09-01T08:00:00.000Z",
+      timestamp: new Date("2026-09-01T08:00:00.000Z").getTime(),
+      numericAmount: 300000,
+    },
+  ]);
+
+  // Transaction Actions with Real-time Timestamp
+  const addTransaction = (item: {
+    title: string;
+    note?: string;
+    amount: number;
+    type: TransactionType;
+    date?: string;
+    rawDate?: string;
+  }) => {
+    const now = new Date();
+    const rawDate = item.rawDate || now.toISOString();
+    const timestamp = now.getTime();
+    const day = now.getDate();
+    const monthShort = INDONESIAN_MONTHS_SHORT[now.getMonth()];
+    const year = now.getFullYear();
+    const hours = String(now.getHours()).padStart(2, "0");
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+
+    // Real-time Indonesian formatted date string e.g. "29 Sep 2026, 23:15 WIB"
+    const formattedDate =
+      item.date || `${day} ${monthShort} ${year}, ${hours}:${minutes} WIB`;
+
+    let newTotal = financeData.totalBalance;
+    if (item.type === "income") {
+      newTotal += item.amount;
+      setFinanceData((prev) => ({
+        ...prev,
+        totalBalance: prev.totalBalance + item.amount,
+        monthlyIncome: prev.monthlyIncome + item.amount,
+      }));
+    } else {
+      newTotal = Math.max(0, newTotal - item.amount);
+      setFinanceData((prev) => ({
+        ...prev,
+        totalBalance: Math.max(0, prev.totalBalance - item.amount),
+        dailyExpense: prev.dailyExpense + item.amount,
+        monthlyExpense: prev.monthlyExpense + item.amount,
+      }));
+    }
+
+    const newItem: TransactionItem = {
+      id: Date.now().toString(),
+      title: item.title,
+      note: item.note,
+      date: formattedDate,
+      amount: formatRupiah(item.amount),
+      balance: `Saldo: ${newTotal.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")},00`,
+      type: item.type,
+      rawDate,
+      timestamp,
+      numericAmount: item.amount,
+    };
+
+    setTransactions((prev) => [newItem, ...prev]);
+  };
+
+  const deleteTransaction = (id: string) => {
+    setTransactions((prev) => prev.filter((item) => item.id !== id));
+  };
 
   // Schedules initial data matching both day 18 and day 26
   const [schedules, setSchedules] = useState<ScheduleItem[]>([
@@ -273,6 +435,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
         currentProfile,
         financeData,
         updateFinanceData,
+        transactions,
+        addTransaction,
+        deleteTransaction,
         activeTab,
         setActiveTab,
       }}
