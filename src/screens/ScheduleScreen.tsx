@@ -1,23 +1,23 @@
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  StyleSheet,
-  View,
-  ScrollView,
-  StatusBar,
-  Text,
-  Pressable,
-  Alert,
-  ToastAndroid,
-  Platform,
+    Alert,
+    Platform,
+    Pressable,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    ToastAndroid,
+    View,
 } from "react-native";
-import { useRouter } from "expo-router";
-import { Colors, Spacing, BorderRadius } from "../constants/theme";
-import { useApp } from "../context/AppContext";
-import { ScheduleHeader } from "../components/ScheduleHeader";
-import { CalendarWidget } from "../components/CalendarWidget";
-import { ScheduleSection } from "../components/ScheduleSection";
 import { AddScheduleModal } from "../components/AddScheduleModal";
 import { BottomNavBar } from "../components/BottomNavBar";
+import { CalendarWidget } from "../components/CalendarWidget";
+import { ScheduleHeader } from "../components/ScheduleHeader";
+import { ScheduleSection } from "../components/ScheduleSection";
+import { BorderRadius, Colors, Spacing } from "../constants/theme";
+import { useApp } from "../context/AppContext";
 import { TabType } from "../types";
 
 export const ScheduleScreen: React.FC = () => {
@@ -66,7 +66,7 @@ export const ScheduleScreen: React.FC = () => {
             showFeedback("Jadwal berhasil dihapus.");
           },
         },
-      ]
+      ],
     );
   };
 
@@ -85,6 +85,8 @@ export const ScheduleScreen: React.FC = () => {
       router.replace("/" as any);
     } else if (tab === "finance") {
       router.push("/finance" as any);
+    } else if (tab === "menu") {
+      router.replace("/" as any);
     }
   };
 
@@ -125,7 +127,10 @@ export const ScheduleScreen: React.FC = () => {
           onDelete={handleDelete}
           onToggleComplete={toggleCompleteSchedule}
           onPressDateDropdown={() =>
-            Alert.alert("Pilih Tanggal", `Tanggal aktif: ${formattedSelectedDate}`)
+            Alert.alert(
+              "Pilih Tanggal",
+              `Tanggal aktif: ${formattedSelectedDate}`,
+            )
           }
         />
 
@@ -156,10 +161,7 @@ export const ScheduleScreen: React.FC = () => {
       />
 
       {/* Bottom Navigation Bar */}
-      <BottomNavBar
-        activeTab="schedule"
-        onSelectTab={handleTabSelect}
-      />
+      <BottomNavBar activeTab="schedule" onSelectTab={handleTabSelect} />
     </View>
   );
 };

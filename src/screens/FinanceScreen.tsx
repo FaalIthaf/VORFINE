@@ -2,16 +2,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  Alert,
-  Platform,
-  Pressable,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TextInput,
-  ToastAndroid,
-  View,
+    Alert,
+    Platform,
+    Pressable,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    ToastAndroid,
+    View,
 } from "react-native";
 import { BottomNavBar } from "../components/BottomNavBar";
 import { BorderRadius, Colors, Spacing } from "../constants/theme";
@@ -124,6 +124,8 @@ export const FinanceScreen: React.FC = () => {
       router.replace("/" as any);
     } else if (tab === "schedule") {
       router.push("/schedule" as any);
+    } else if (tab === "menu") {
+      router.replace("/" as any);
     }
   };
 
