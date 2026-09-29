@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import * as Device from 'expo-device';
 import { Platform, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -96,3 +97,10 @@ const styles = StyleSheet.create({
     borderRadius: Spacing.four,
   },
 });
+=======
+import HomeScreen from "../screens/HomeScreen";
+
+export default function IndexScreen() {
+  return <HomeScreen />;
+}
+>>>>>>> origin/DASHBOARD
