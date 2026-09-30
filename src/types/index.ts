@@ -2,7 +2,7 @@ export type ScheduleCategory =
   | "Rutinitas"
   | "Domestik"
   | "Pekerjaan"
-  | "Keuangan";
+  | "Lainnya";
 
 export interface ScheduleItem {
   id: string;

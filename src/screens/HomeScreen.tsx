@@ -161,7 +161,9 @@ export const HomeScreen: React.FC = () => {
               <View style={styles.sectionTitleWithBadge}>
                 <Text style={styles.sectionTitle}>Riwayat Transaksi</Text>
                 <View style={styles.transCountBadge}>
-                  <Text style={styles.transCountText}>{transactions.length}</Text>
+                  <Text style={styles.transCountText}>
+                    {transactions.length}
+                  </Text>
                 </View>
               </View>
               <Pressable
@@ -224,7 +226,7 @@ export const HomeScreen: React.FC = () => {
           {/* Schedule Section (Today's Summary) */}
           <ScheduleSection
             currentDateText={formattedSelectedDate}
-            items={schedules.slice(0, 4)}
+            items={schedules.slice(0, 8)}
             onToggleComplete={toggleCompleteSchedule}
             onPressDateDropdown={() => router.push("/schedule" as any)}
           />

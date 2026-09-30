@@ -30,7 +30,7 @@ const CATEGORIES: ScheduleCategory[] = [
   "Rutinitas",
   "Domestik",
   "Pekerjaan",
-  "Keuangan",
+  "Lainnya",
 ];
 
 const REMINDER_OPTIONS = [
