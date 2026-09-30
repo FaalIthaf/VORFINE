@@ -54,8 +54,8 @@ export const AddScheduleModal: React.FC<AddScheduleModalProps> = ({
     useState<ScheduleCategory>("Rutinitas");
 
   // Date & Time settings
-  const [startTimeText, setStartTimeText] = useState("08.00 WIB");
-  const [endTimeText, setEndTimeText] = useState("16.00 WIB");
+  const [startTimeText, setStartTimeText] = useState("00.00 WIB");
+  const [endTimeText, setEndTimeText] = useState("00.00 WIB");
   const [scheduleDateText, setScheduleDateText] =
     useState(defaultFormattedDate);
   const [timePickerTarget, setTimePickerTarget] = useState<
@@ -247,7 +247,7 @@ export const AddScheduleModal: React.FC<AddScheduleModalProps> = ({
                       <Switch
                         value={alarmEnabled}
                         onValueChange={setAlarmEnabled}
-                        trackColor={{ false: "#D0D5DD", true: "#6941C6" }}
+                        trackColor={{ false: "#D0D5DD", true: "#D0D5D6" }}
                         thumbColor={Colors.white}
                       />
                     </View>
@@ -266,11 +266,6 @@ export const AddScheduleModal: React.FC<AddScheduleModalProps> = ({
                           <Text style={styles.reminderDropdownText}>
                             {reminderTime}
                           </Text>
-                          <Ionicons
-                            name="chevron-down"
-                            size={14}
-                            color={Colors.textPrimary}
-                          />
                         </Pressable>
                       </View>
                     )}

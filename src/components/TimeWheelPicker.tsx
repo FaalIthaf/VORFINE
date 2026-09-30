@@ -32,7 +32,7 @@ const QUICK_MINUTES = [0, 15, 30, 45];
 export const TimeWheelPicker: React.FC<TimeWheelPickerProps> = ({
   visible,
   title,
-  initialTime = "08.00 WIB",
+  initialTime = "00.00 WIB",
   onClose,
   onConfirm,
 }) => {
@@ -153,9 +153,6 @@ export const TimeWheelPicker: React.FC<TimeWheelPickerProps> = ({
             </View>
             <View>
               <Text style={styles.pickerTitle}>{title}</Text>
-              <Text style={styles.pickerSubtitle}>
-                Gulir jam & menit (Alarm Wheel)
-              </Text>
             </View>
           </View>
           <Pressable
@@ -309,9 +306,7 @@ export const TimeWheelPicker: React.FC<TimeWheelPickerProps> = ({
               style={styles.stepBtnBottom}
               onPress={() => scrollToMinute(selectedMinute + 1)}
               hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-            >
-              <Ionicons name="chevron-down" size={14} color="#667085" />
-            </Pressable>
+            ></Pressable>
           </View>
         </View>
 
@@ -324,10 +319,7 @@ export const TimeWheelPicker: React.FC<TimeWheelPickerProps> = ({
               return (
                 <Pressable
                   key={m}
-                  style={[
-                    styles.quickChip,
-                    isActive && styles.quickChipActive,
-                  ]}
+                  style={[styles.quickChip, isActive && styles.quickChipActive]}
                   onPress={() => scrollToMinute(m)}
                 >
                   <Text

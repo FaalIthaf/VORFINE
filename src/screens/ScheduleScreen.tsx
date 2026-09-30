@@ -2,16 +2,15 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-    Alert,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    ToastAndroid,
-    View,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  ToastAndroid,
+  View,
 } from "react-native";
 import { AddScheduleModal } from "../components/AddScheduleModal";
 import { BottomNavBar } from "../components/BottomNavBar";
@@ -45,7 +44,9 @@ export const ScheduleScreen: React.FC = () => {
   } = useApp();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [scheduleToDelete, setScheduleToDelete] = useState<ScheduleItem | null>(null);
+  const [scheduleToDelete, setScheduleToDelete] = useState<ScheduleItem | null>(
+    null,
+  );
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
 
   const showFeedback = (msg: string) => {
@@ -128,10 +129,6 @@ export const ScheduleScreen: React.FC = () => {
           items={filteredSchedules}
           showDeleteButton={true}
           onDelete={handleDelete}
-          onToggleComplete={toggleCompleteSchedule}
-          onPressDateDropdown={() =>
-            showFeedback(`Tanggal aktif: ${formattedSelectedDate}`)
-          }
         />
 
         {/* Floating/Bottom Button: + TAMBAH JADWAL BARU */}

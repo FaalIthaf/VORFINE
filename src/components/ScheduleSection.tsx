@@ -31,8 +31,8 @@ export const ScheduleSection: React.FC<ScheduleSectionProps> = ({
         return Colors.category.domestik;
       case "Pekerjaan":
         return Colors.category.pekerjaan;
-      case "Keuangan":
-        return Colors.category.keuangan;
+      case "Lainnya":
+        return Colors.category.lainnya;
       default:
         return Colors.category.rutinitas;
     }
@@ -61,12 +61,6 @@ export const ScheduleSection: React.FC<ScheduleSectionProps> = ({
             accessibilityLabel={`Pilih Tanggal: ${currentDateText}`}
           >
             <Text style={styles.dateText}>{currentDateText}</Text>
-            <Ionicons
-              name="chevron-down"
-              size={14}
-              color={Colors.textPrimary}
-              style={styles.dateChevron}
-            />
           </Pressable>
         </View>
 

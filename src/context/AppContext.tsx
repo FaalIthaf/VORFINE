@@ -7,6 +7,7 @@ import {
   TransactionItem,
   TransactionType,
 } from "../types";
+import { sortSchedulesByTime } from "../utils/scheduleUtils";
 
 export interface AppContextType {
   // Schedules
@@ -273,6 +274,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       completed: true,
       alarmEnabled: true,
       reminderTime: "10 Menit Sebelum",
+      startTime: "05:00",
+      endTime: "06:00",
     },
     {
       id: "2",
@@ -283,6 +286,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       completed: true,
       alarmEnabled: false,
       reminderTime: "15 Menit Sebelum",
+      startTime: "07:00",
+      endTime: "07:30",
     },
     {
       id: "3",
@@ -293,6 +298,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       completed: true,
       alarmEnabled: true,
       reminderTime: "30 Menit Sebelum",
+      startTime: "08:00",
+      endTime: "16:00",
     },
     {
       id: "4",
@@ -303,6 +310,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       completed: true,
       alarmEnabled: false,
       reminderTime: "10 Menit Sebelum",
+      startTime: "08:00",
+      endTime: "16:00",
     },
     {
       id: "5",
@@ -313,6 +322,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       completed: false,
       alarmEnabled: true,
       reminderTime: "15 Menit Sebelum",
+      startTime: "09:00",
+      endTime: "11:00",
     },
   ]);
 
@@ -356,7 +367,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       completed: false,
       dateKey: item.dateKey || selectedDateKey,
     };
-    setSchedules((prev) => [newItem, ...prev]);
+    setSchedules((prev) => [...prev, newItem]);
   };
 
   const deleteSchedule = (id: string) => {
@@ -371,17 +382,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     );
   };
 
-  // Filtered schedules by selected date & search query
-  const filteredSchedules = schedules.filter((item) => {
-    const matchesDate = item.dateKey === selectedDateKey;
-    const matchesQuery =
-      searchQuery.trim().length === 0 ||
-      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.time.toLowerCase().includes(searchQuery.toLowerCase());
+  // Filtered schedules by selected date & search query, sorted chronologically ascending by start time
+  const filteredSchedules = schedules
+    .filter((item) => {
+      const matchesDate = item.dateKey === selectedDateKey;
+      const matchesQuery =
+        searchQuery.trim().length === 0 ||
+        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.time.toLowerCase().includes(searchQuery.toLowerCase());
 
-    return matchesDate && matchesQuery;
-  });
+      return matchesDate && matchesQuery;
+    })
+    .sort(sortSchedulesByTime);
 
   // Profile Actions
   const selectProfile = (id: string) => {
