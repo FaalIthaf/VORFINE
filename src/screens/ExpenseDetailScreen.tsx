@@ -118,7 +118,9 @@ export const ExpenseDetailScreen: React.FC = () => {
   }, [filteredTransactions]);
 
   const formatRupiah = (val: number): string => {
-    return "IDR  " + val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") + ",00";
+    return (
+      "IDR  " + val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") + ",00"
+    );
   };
 
   const handleSelectMode = (mode: PeriodFilterMode) => {
@@ -143,7 +145,10 @@ export const ExpenseDetailScreen: React.FC = () => {
       return;
     }
     if (isNaN(amountNum) || amountNum <= 0) {
-      Alert.alert("Perhatian", "Silakan masukkan nominal pengeluaran yang valid.");
+      Alert.alert(
+        "Perhatian",
+        "Silakan masukkan nominal pengeluaran yang valid.",
+      );
       return;
     }
 
@@ -159,7 +164,9 @@ export const ExpenseDetailScreen: React.FC = () => {
     setNewNote("");
     setIsAddModalVisible(false);
 
-    showFeedback("Pengeluaran baru berhasil disimpan dengan stempel waktu real-time!");
+    showFeedback(
+      "Pengeluaran baru berhasil disimpan dengan stempel waktu real-time!",
+    );
   };
 
   return (
@@ -200,7 +207,6 @@ export const ExpenseDetailScreen: React.FC = () => {
           <DetailSummaryCard
             title="Total Pengeluaran"
             amount={formatRupiah(totalAmount)}
-            statPercentage="+2% dari bulan lalu"
             transactionCount={filteredTransactions.length}
           />
 
@@ -211,15 +217,6 @@ export const ExpenseDetailScreen: React.FC = () => {
               <View style={styles.sectionBadge}>
                 <Text style={styles.sectionBadgeText}>Riwayat Transaksi</Text>
               </View>
-
-              {/* Tombol Tambah Pengeluaran Cepat */}
-              <Pressable
-                style={styles.addBtnSmall}
-                onPress={() => setIsAddModalVisible(true)}
-              >
-                <Ionicons name="add-circle" size={18} color={Colors.white} />
-                <Text style={styles.addBtnSmallText}>Catat Pengeluaran</Text>
-              </Pressable>
             </View>
 
             {/* List Transaksi */}
@@ -278,7 +275,9 @@ export const ExpenseDetailScreen: React.FC = () => {
             onPress={(e) => e.stopPropagation()}
           >
             <View style={styles.modalFormHeader}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+              >
                 <Ionicons name="arrow-down-circle" size={24} color="#C0392B" />
                 <Text style={styles.modalFormTitle}>Tambah Pengeluaran</Text>
               </View>

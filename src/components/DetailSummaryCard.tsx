@@ -1,4 +1,3 @@
-import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { BorderRadius, Colors, Spacing } from "../constants/theme";
@@ -13,7 +12,6 @@ interface DetailSummaryCardProps {
 export const DetailSummaryCard: React.FC<DetailSummaryCardProps> = ({
   title,
   amount,
-  statPercentage = "+2% dari bulan lalu",
   transactionCount = 2,
 }) => {
   return (
@@ -28,16 +26,6 @@ export const DetailSummaryCard: React.FC<DetailSummaryCardProps> = ({
 
       {/* Badges Sub-info Row */}
       <View style={styles.subInfoRow}>
-        <View style={styles.statPill}>
-          <Ionicons
-            name="arrow-up"
-            size={12}
-            color={Colors.white}
-            style={styles.arrowIcon}
-          />
-          <Text style={styles.statPillText}>{statPercentage}</Text>
-        </View>
-
         <Text style={styles.transactionCountText}>
           {transactionCount} Transaksi
         </Text>
