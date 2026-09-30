@@ -2,16 +2,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-    Alert,
-    Platform,
-    Pressable,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TextInput,
-    ToastAndroid,
-    View,
+  Alert,
+  Platform,
+  Pressable,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  ToastAndroid,
+  View,
 } from "react-native";
 import { BottomNavBar } from "../components/BottomNavBar";
 import { BorderRadius, Colors, Spacing } from "../constants/theme";
@@ -165,7 +165,7 @@ export const FinanceScreen: React.FC = () => {
         >
           <Ionicons name="arrow-back" size={24} color={Colors.white} />
         </Pressable>
-        <Text style={styles.headerTitle}>Keuangan & Pembudgetan</Text>
+        <Text style={styles.headerTitle}>Pembudgetan</Text>
         <View style={styles.headerRight}>
           <Text style={styles.brandText}>VORFÍNE</Text>
         </View>

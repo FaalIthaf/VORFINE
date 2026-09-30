@@ -1,25 +1,23 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
-    Image,
-    Pressable,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    View
+  Image,
+  Pressable,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 import { BottomNavBar } from "../components/BottomNavBar";
 import { Header } from "../components/Header";
 import { BorderRadius, Colors, Spacing } from "../constants/theme";
 import { DEFAULT_APP_INFO, DEFAULT_CHANGELOGS } from "../data/appInfoData";
 import {
-    AppAdvantage,
-    AppInfoData,
-    ChangelogItem,
-    ChangelogRelease,
-    ChangelogSection,
-    TabType,
+  AppAdvantage,
+  AppInfoData,
+  ChangelogRelease,
+  TabType
 } from "../types";
 
 export type InternalTabType = "about" | "changelog";
@@ -288,107 +286,6 @@ export const InfoScreen: React.FC<InfoScreenProps> = ({
                   </View>
                 ))}
               </View>
-            </View>
-          </View>
-        )}
-
-        {/* E. KONTEN TAB 2: 🛠️ CATATAN UPDATE / CHANGELOG */}
-        {internalTab === "changelog" && (
-          <View style={styles.tabContentContainer}>
-            {/* Header Section */}
-            <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionEmoji}>🛠️</Text>
-              <Text style={styles.sectionTitle}>
-                CATATAN UPDATE / CHANGELOG
-              </Text>
-            </View>
-
-            {/* Version Pills Switcher (Jika ada lebih dari 1 rilis) */}
-            {changelogs.length > 1 && (
-              <View style={styles.versionPillsContainer}>
-                {changelogs.map((item) => {
-                  const isSelected = item.version === currentChangelog.version;
-                  return (
-                    <Pressable
-                      key={item.version}
-                      style={[
-                        styles.versionPill,
-                        isSelected && styles.versionPillActive,
-                      ]}
-                      onPress={() => setSelectedVersion(item.version)}
-                    >
-                      <Text
-                        style={[
-                          styles.versionPillText,
-                          isSelected && styles.versionPillTextActive,
-                        ]}
-                      >
-                        v{item.version} {item.isLatest ? "★ Terbaru" : ""}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            )}
-
-            {/* Versi Card Utama */}
-            <View style={styles.versionReleaseCard}>
-              <View style={styles.versionBadgeRow}>
-                <Text style={styles.versionBadgeTitle}>
-                  [ Versi {currentChangelog.version} ] — {currentChangelog.date}
-                </Text>
-                {currentChangelog.isLatest && (
-                  <View style={styles.latestTag}>
-                    <Text style={styles.latestTagText}>Terbaru</Text>
-                  </View>
-                )}
-              </View>
-
-              <View style={styles.cardDivider} />
-
-              {/* Loop Section Changelog (Bug Fixes & Fitur Baru) */}
-              {currentChangelog.sections.map(
-                (section: ChangelogSection, idx: number) => (
-                  <View
-                    key={section.id}
-                    style={[
-                      styles.changelogSectionWrapper,
-                      idx > 0 && styles.sectionMarginTop,
-                    ]}
-                  >
-                    {/* Judul Kategori (e.g. 🐛 Bug Fixes & Perbaikan:) */}
-                    <View style={styles.changelogCategoryRow}>
-                      <Text style={styles.categoryEmoji}>{section.icon}</Text>
-                      <Text style={styles.categoryTitle}>{section.title}</Text>
-                    </View>
-
-                    {/* Daftar Item Perubahan */}
-                    <View style={styles.changelogItemsList}>
-                      {section.items.map((item: ChangelogItem) => (
-                        <View key={item.id} style={styles.changelogItemRow}>
-                          <Text style={styles.bulletDot}>•</Text>
-                          {renderTagBadge(item.tag)}
-                          <Text style={styles.itemDescriptionText}>
-                            {item.description}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-                ),
-              )}
-            </View>
-
-            {/* Info Footer Riwayat */}
-            <View style={styles.changelogFooter}>
-              <Ionicons
-                name="shield-checkmark-outline"
-                size={16}
-                color="#7F8C8D"
-              />
-              <Text style={styles.changelogFooterText}>
-                Vorfine diperbarui secara berkala demi performa terbaik.
-              </Text>
             </View>
           </View>
         )}
