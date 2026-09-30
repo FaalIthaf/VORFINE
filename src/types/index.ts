@@ -25,6 +25,27 @@ export interface Profile {
   isCurrent: boolean;
 }
 
+export interface User {
+  id: string;
+  fullName: string;
+  email: string;
+  phone?: string;
+  role: string;
+  avatar?: string;
+  biometricsEnabled: boolean;
+  smartNotifications: boolean;
+  sensor3DActive: boolean;
+  encryptionStandard: string;
+  securitySessionActive: boolean;
+}
+
+export interface AuthState {
+  user: User | null;
+  isAuthenticated: boolean;
+  rememberMe: boolean;
+  isLoading: boolean;
+}
+
 export interface FinanceData {
   totalBalance: number;
   dailyExpense: number;

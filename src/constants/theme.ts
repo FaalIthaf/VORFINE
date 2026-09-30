@@ -20,16 +20,26 @@ export const Colors = {
   },
 
   // VORFÍNE Core Colors
-  primary: "#4E878C",
-  primaryDark: "#3E6F74",
-  tealSlate: "#457980",
-  tealSlateDark: "#3A676D",
-  background: "#F4F6F6",
+  primary: "#2C6E6A",
+  primaryDark: "#1F4E4B",
+  primaryLight: "#3D8E89",
+  tealSlate: "#2C6E6A",
+  tealSlateDark: "#1F4E4B",
+  mintSoft: "#E8F5E9",
+  mintBorder: "#D1E7DD",
+  mintText: "#1B5E20",
+  charcoal: "#1E1E1E",
+  mediumGrey: "#6C757D",
+  cardBg: "#F8F9FA",
+  inputBorder: "#E2E8F0",
+  inputBg: "#F8FAFC",
+  background: "#FFFFFF",
+  screenBackground: "#F8F9FA",
   white: "#FFFFFF",
 
   // Text Colors
-  textPrimary: "#2C3E50",
-  textSecondary: "#7F8C8D",
+  textPrimary: "#1E1E1E",
+  textSecondary: "#6C757D",
   textLight: "#FFFFFF",
   textLightMuted: "#D0E5E7",
 

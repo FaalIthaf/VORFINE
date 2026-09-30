@@ -24,12 +24,14 @@ import { ScheduleSection } from "../components/ScheduleSection";
 import { TransactionItemCard } from "../components/TransactionItemCard";
 import { BorderRadius, Colors, Spacing } from "../constants/theme";
 import { useApp } from "../context/AppContext";
+import { useAuth } from "../context/AuthContext";
 import { TabType } from "../types";
 import { parseAmountToNumber, parseTransactionDate } from "../utils/dateUtils";
 import { InfoScreen } from "./InfoScreen";
 
 export const HomeScreen: React.FC = () => {
   const router = useRouter();
+  const { user } = useAuth();
   const {
     schedules,
     toggleCompleteSchedule,
@@ -177,7 +179,7 @@ export const HomeScreen: React.FC = () => {
 
       {/* Header Section */}
       <Header
-        currentProfileName={currentProfile.name}
+        currentProfileName={user?.fullName || currentProfile.name}
         onPressProfile={() => setIsProfileModalVisible(true)}
         onPressNotification={handleNotificationPress}
         hasUnreadNotification={hasUnreadNotification}
@@ -189,7 +191,7 @@ export const HomeScreen: React.FC = () => {
           <InfoScreen
             showHeader={false}
             showBottomNav={false}
-            currentProfileName={currentProfile.name}
+            currentProfileName={user?.fullName || currentProfile.name}
             onPressProfile={() => setIsProfileModalVisible(true)}
             onPressNotification={handleNotificationPress}
             hasUnreadNotification={hasUnreadNotification}
@@ -210,6 +212,36 @@ export const HomeScreen: React.FC = () => {
             />
           }
         >
+          {/* Security & Biometrics Quick Access Card */}
+          <Pressable
+            style={styles.biometricQuickBar}
+            onPress={() => router.push("/auth/fingerprint" as any)}
+          >
+            <View style={styles.biometricQuickLeft}>
+              <View style={styles.biometricAvatarCircle}>
+                <Text style={styles.biometricAvatarText}>
+                  {user?.avatar || "MF"}
+                </Text>
+              </View>
+              <View style={styles.biometricQuickInfo}>
+                <View style={styles.biometricNameRow}>
+                  <Text style={styles.biometricQuickName} numberOfLines={1}>
+                    {user?.fullName || "Muhammad Ivan Fadholli"}
+                  </Text>
+                  <View style={styles.activeDotSmall} />
+                </View>
+                <Text style={styles.biometricQuickSubtitle}>
+                  Sensor 3D & Biometrik Aktif • AES-256
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.biometricQuickRight}>
+              <Ionicons name="finger-print-outline" size={19} color={Colors.primary} />
+              <Ionicons name="scan-outline" size={17} color={Colors.primary} />
+            </View>
+          </Pressable>
+
           {/* Card 1: Total Saldo */}
           <BalanceCard
             title="Total Saldo"
@@ -579,6 +611,75 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     color: Colors.textPrimary,
+  },
+  biometricQuickBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: BorderRadius.xl,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: Spacing.md,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  biometricQuickLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flex: 1,
+  },
+  biometricAvatarCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  biometricAvatarText: {
+    color: Colors.white,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  biometricQuickInfo: {
+    flex: 1,
+  },
+  biometricNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  biometricQuickName: {
+    fontSize: 13.5,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  activeDotSmall: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#16A34A",
+  },
+  biometricQuickSubtitle: {
+    fontSize: 11,
+    color: "#64748B",
+    marginTop: 1,
+  },
+  biometricQuickRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#E0F2F1",
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.round,
   },
 });
 

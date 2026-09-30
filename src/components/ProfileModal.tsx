@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
     KeyboardAvoidingView,
@@ -32,6 +33,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   onSelectProfile,
   onAddProfile,
 }) => {
+  const router = useRouter();
   const [isAdding, setIsAdding] = useState(false);
   const [newProfileName, setNewProfileName] = useState("");
 
@@ -159,6 +161,37 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                     <Text style={styles.addProfileText}>Buat Profil Baru</Text>
                   </Pressable>
                 )}
+
+                {/* Security & Authentication Shortcuts */}
+                <View style={styles.authQuickActionsRow}>
+                  <Pressable
+                    style={styles.authQuickBtn}
+                    onPress={() => {
+                      onClose();
+                      router.push("/auth/fingerprint" as any);
+                    }}
+                  >
+                    <Ionicons
+                      name="finger-print-outline"
+                      size={16}
+                      color={Colors.primary}
+                    />
+                    <Text style={styles.authQuickBtnText}>Biometrik & PIN</Text>
+                  </Pressable>
+
+                  <Pressable
+                    style={styles.authQuickBtn}
+                    onPress={() => {
+                      onClose();
+                      router.push("/auth/login" as any);
+                    }}
+                  >
+                    <Ionicons name="log-in-outline" size={16} color="#475569" />
+                    <Text style={[styles.authQuickBtnText, { color: "#475569" }]}>
+                      Ganti Akun
+                    </Text>
+                  </Pressable>
+                </View>
               </View>
             </TouchableWithoutFeedback>
           </KeyboardAvoidingView>
@@ -324,5 +357,28 @@ const styles = StyleSheet.create({
   },
   pressedState: {
     opacity: 0.7,
+  },
+  authQuickActionsRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 12,
+  },
+  authQuickBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: BorderRadius.md,
+  },
+  authQuickBtnText: {
+    fontSize: 12.5,
+    fontWeight: "600",
+    color: Colors.primary,
   },
 });
