@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
-  Image,
   Pressable,
   ScrollView,
   StatusBar,
@@ -10,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { BottomNavBar } from "../components/BottomNavBar";
+import { BrandLogo } from "../components/BrandLogo";
 import { Header } from "../components/Header";
 import { BorderRadius, Colors, Spacing } from "../constants/theme";
 import { DEFAULT_APP_INFO, DEFAULT_CHANGELOGS } from "../data/appInfoData";
@@ -141,13 +141,9 @@ export const InfoScreen: React.FC<InfoScreenProps> = ({
         {/* B. Hero Section (Info Aplikasi) */}
         <View style={styles.heroCard}>
           <View style={styles.heroTopRow}>
-            {/* Logo Vorfine */}
+            {/* Logo Vorfine - Synchronized with Header Logo */}
             <View style={styles.heroLogoWrapper}>
-              <Image
-                source={require("../../assets/images/VORFINE.png")}
-                style={styles.heroLogoImage}
-                resizeMode="contain"
-              />
+              <BrandLogo color={Colors.primary} size="medium" align="flex-start" />
             </View>
 
             {/* Nama & Versi Aplikasi */}

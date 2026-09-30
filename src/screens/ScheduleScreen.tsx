@@ -32,6 +32,7 @@ export const ScheduleScreen: React.FC = () => {
     nextMonth,
     monthName,
     formattedSelectedDate,
+    currentTimeStr,
     selectedDateKey,
     searchQuery,
     setSearchQuery,
@@ -122,10 +123,10 @@ export const ScheduleScreen: React.FC = () => {
           monthName={monthName}
         />
 
-        {/* "Jadwal Saya" Section */}
+        {/* "Jadwal Saya" Section dengan Jam Real-time */}
         <ScheduleSection
           sectionTitle="Jadwal Saya"
-          currentDateText={formattedSelectedDate}
+          currentDateText={`${formattedSelectedDate} • ${currentTimeStr}`}
           items={filteredSchedules}
           showDeleteButton={true}
           onDelete={handleDelete}

@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors, Spacing } from "../constants/theme";
+import { BrandLogo } from "./BrandLogo";
 
 interface DetailHeaderProps {
   searchQuery: string;
@@ -76,14 +77,7 @@ export const DetailHeader: React.FC<DetailHeaderProps> = ({
         </View>
 
         {/* App Logo / Title */}
-        <View style={styles.brandContainer}>
-          <Text style={styles.brandTitle}>VORFÍNE</Text>
-          <View style={styles.waveContainer}>
-            <View style={styles.waveLineLeft} />
-            <View style={styles.waveDip} />
-            <View style={styles.waveLineRight} />
-          </View>
-        </View>
+        <BrandLogo color={Colors.white} size="medium" />
       </View>
     </View>
   );

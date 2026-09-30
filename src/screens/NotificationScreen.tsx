@@ -20,17 +20,20 @@ import {
   MaxContentWidth,
   Spacing,
 } from "../constants/theme";
+import { useApp } from "../context/AppContext";
 import { NotificationItem } from "../types";
 
 export const NotificationScreen: React.FC = () => {
   const router = useRouter();
+  const {
+    notifications,
+    toggleReadNotification,
+    deleteNotification,
+  } = useApp();
 
   // State Checkbox Filter "Belum Dibaca"
   const [isUnreadOnly, setIsUnreadOnly] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
-
-  // Mock data notifikasi sesuai spesifikasi dan mock-up UI
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
   const showFeedback = (msg: string) => {
     if (Platform.OS === "android") {
@@ -57,18 +60,20 @@ export const NotificationScreen: React.FC = () => {
       ? "Tandai Belum Dibaca"
       : "Tandai Sudah Dibaca";
 
-    Alert.alert("Detail Notifikasi", item.message, [
+    Alert.alert(item.category || "Detail Notifikasi", item.message, [
       {
         text: actionLabel,
         onPress: () => {
-          setNotifications((prev) =>
-            prev.map((notif) =>
-              notif.id === item.id
-                ? { ...notif, isRead: !notif.isRead }
-                : notif,
-            ),
-          );
-          showFeedback(`Status notifikasi diperbarui.`);
+          toggleReadNotification(item.id);
+          showFeedback("Status notifikasi diperbarui.");
+        },
+      },
+      {
+        text: "Hapus",
+        style: "destructive",
+        onPress: () => {
+          deleteNotification(item.id);
+          showFeedback("Notifikasi dihapus.");
         },
       },
       { text: "Tutup", style: "cancel" },

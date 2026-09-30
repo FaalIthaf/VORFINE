@@ -54,13 +54,29 @@ export const AddScheduleModal: React.FC<AddScheduleModalProps> = ({
     useState<ScheduleCategory>("Rutinitas");
 
   // Date & Time settings
-  const [startTimeText, setStartTimeText] = useState("00.00 WIB");
-  const [endTimeText, setEndTimeText] = useState("00.00 WIB");
+  const [startTimeText, setStartTimeText] = useState("08.00 WIB");
+  const [endTimeText, setEndTimeText] = useState("08.00 WIB");
   const [scheduleDateText, setScheduleDateText] =
     useState(defaultFormattedDate);
   const [timePickerTarget, setTimePickerTarget] = useState<
     "start" | "end" | null
   >(null);
+
+  const parseMinutes = (timeStr: string): number => {
+    const match = timeStr.match(/(\d{1,2})[.:](\d{1,2})/);
+    if (!match) return 0;
+    return parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
+  };
+
+  React.useEffect(() => {
+    if (visible) {
+      const now = new Date();
+      const h = String(now.getHours()).padStart(2, "0");
+      const defaultStart = `${h}.00 WIB`;
+      setStartTimeText(defaultStart);
+      setEndTimeText(defaultStart);
+    }
+  }, [visible]);
 
   // Alarm & Reminders
   const [alarmEnabled, setAlarmEnabled] = useState(true);
@@ -329,12 +345,22 @@ export const AddScheduleModal: React.FC<AddScheduleModalProps> = ({
                 : "Pilih Waktu Selesai"
             }
             initialTime={
-              timePickerTarget === "start" ? startTimeText : endTimeText
+              timePickerTarget === "start"
+                ? startTimeText
+                : parseMinutes(endTimeText) < parseMinutes(startTimeText)
+                  ? startTimeText
+                  : endTimeText
             }
+            minTime={timePickerTarget === "end" ? startTimeText : undefined}
             onClose={() => setTimePickerTarget(null)}
             onConfirm={(formattedTime) => {
               if (timePickerTarget === "start") {
                 setStartTimeText(formattedTime);
+                const startMins = parseMinutes(formattedTime);
+                const endMins = parseMinutes(endTimeText);
+                if (endMins < startMins) {
+                  setEndTimeText(formattedTime);
+                }
               } else {
                 setEndTimeText(formattedTime);
               }

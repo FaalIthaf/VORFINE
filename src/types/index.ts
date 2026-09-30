@@ -15,6 +15,8 @@ export interface ScheduleItem {
   reminderTime?: string;
   startTime?: string;
   endTime?: string;
+  profileId?: string;
+  reminderTriggered?: boolean;
 }
 
 export interface Profile {
@@ -28,9 +30,11 @@ export interface FinanceData {
   dailyExpense: number;
   monthlyIncome: number;
   monthlyExpense: number;
+  yearlyExpense: number;
   monthName: string;
   dailyBudget: number;
   monthlyBudget: number;
+  yearlyBudget: number;
 }
 
 export type TabType = "home" | "finance" | "schedule" | "menu";
@@ -48,6 +52,7 @@ export interface TransactionItem {
   rawDate?: string;
   timestamp?: number;
   numericAmount?: number;
+  profileId?: string;
 }
 
 export type PeriodFilterMode = "all" | "day" | "month" | "year";
@@ -58,6 +63,8 @@ export interface NotificationItem {
   time: string;
   isRead: boolean;
   category?: string;
+  profileId?: string;
+  timestamp?: number;
 }
 
 // App Info & Changelog Types

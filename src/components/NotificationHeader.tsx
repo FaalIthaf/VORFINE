@@ -3,6 +3,7 @@ import React from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors, Spacing } from "../constants/theme";
+import { BrandLogo } from "./BrandLogo";
 
 interface NotificationHeaderProps {
   onBackPress: () => void;
@@ -39,14 +40,7 @@ export const NotificationHeader: React.FC<NotificationHeaderProps> = ({
         </View>
 
         {/* Right Side: VORFÍNE Logo with Wave */}
-        <View style={styles.brandContainer}>
-          <Text style={styles.brandTitle}>VORFÍNE</Text>
-          <View style={styles.waveContainer}>
-            <View style={styles.waveLineLeft} />
-            <View style={styles.waveDip} />
-            <View style={styles.waveLineRight} />
-          </View>
-        </View>
+        <BrandLogo color={Colors.white} size="medium" />
       </View>
     </View>
   );

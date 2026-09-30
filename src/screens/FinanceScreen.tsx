@@ -13,28 +13,34 @@ import {
   ToastAndroid,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomNavBar } from "../components/BottomNavBar";
+import { BrandLogo } from "../components/BrandLogo";
 import { BorderRadius, Colors, Spacing } from "../constants/theme";
 import { useApp } from "../context/AppContext";
 import { TabType } from "../types";
 
 export const FinanceScreen: React.FC = () => {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { financeData, updateFinanceData, addTransaction, setActiveTab } =
     useApp();
 
-  // New Transaction Form State
-  const [transType, setTransType] = useState<"expense" | "income">("expense");
+  // 7. New Transaction Form State (default: Pemasukan on left, Pengeluaran on right)
+  const [transType, setTransType] = useState<"income" | "expense">("income");
   const [transTitle, setTransTitle] = useState("");
   const [transAmount, setTransAmount] = useState("");
 
-  // Budget Edit State
+  // 6. Budget Edit State (Daily, Monthly, and Annual)
   const [isEditingBudget, setIsEditingBudget] = useState(false);
   const [tempDailyBudget, setTempDailyBudget] = useState(
     financeData.dailyBudget.toString(),
   );
   const [tempMonthlyBudget, setTempMonthlyBudget] = useState(
     financeData.monthlyBudget.toString(),
+  );
+  const [tempYearlyBudget, setTempYearlyBudget] = useState(
+    (financeData.yearlyBudget || 0).toString(),
   );
 
   const showFeedback = (msg: string) => {
@@ -49,32 +55,40 @@ export const FinanceScreen: React.FC = () => {
     return "Rp " + val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") + ",00";
   };
 
-  // Calculations for Budget Alert System
+  // Calculations for Daily Budget Alert System
   const dailySpent = financeData.dailyExpense;
   const dailyLimit = financeData.dailyBudget;
-  const dailyPercentage = Math.min(
-    Math.round((dailySpent / (dailyLimit || 1)) * 100),
-    100,
-  );
-  const isDailyOver = dailySpent >= dailyLimit;
-  const isDailyNear = dailySpent >= dailyLimit * 0.8 && !isDailyOver;
+  const dailyPercentage =
+    dailyLimit > 0 ? Math.min(Math.round((dailySpent / dailyLimit) * 100), 100) : 0;
+  const isDailyOver = dailyLimit > 0 && dailySpent >= dailyLimit;
+  const isDailyNear =
+    dailyLimit > 0 && dailySpent >= dailyLimit * 0.8 && !isDailyOver;
 
+  // Calculations for Monthly Budget Alert System
   const monthlySpent = financeData.monthlyExpense;
   const monthlyLimit = financeData.monthlyBudget;
-  const monthlyPercentage = Math.min(
-    Math.round((monthlySpent / (monthlyLimit || 1)) * 100),
-    100,
-  );
-  const isMonthlyOver = monthlySpent >= monthlyLimit;
-  const isMonthlyNear = monthlySpent >= monthlyLimit * 0.8 && !isMonthlyOver;
+  const monthlyPercentage =
+    monthlyLimit > 0
+      ? Math.min(Math.round((monthlySpent / monthlyLimit) * 100), 100)
+      : 0;
+  const isMonthlyOver = monthlyLimit > 0 && monthlySpent >= monthlyLimit;
+  const isMonthlyNear =
+    monthlyLimit > 0 && monthlySpent >= monthlyLimit * 0.8 && !isMonthlyOver;
+
+  // 6. Calculations for Annual Budget Monitoring
+  const yearlySpent = financeData.yearlyExpense || 0;
+  const yearlyLimit = financeData.yearlyBudget || 0;
+  const yearlyPercentage =
+    yearlyLimit > 0
+      ? Math.min(Math.round((yearlySpent / yearlyLimit) * 100), 100)
+      : 0;
+  const isYearlyOver = yearlyLimit > 0 && yearlySpent >= yearlyLimit;
+  const isYearlyNear =
+    yearlyLimit > 0 && yearlySpent >= yearlyLimit * 0.8 && !isYearlyOver;
 
   // Save New Transaction
   const handleSaveTransaction = () => {
     const amountNum = parseInt(transAmount.replace(/[^0-9]/g, ""), 10);
-    if (!transTitle.trim()) {
-      Alert.alert("Perhatian", "Silakan masukkan keterangan transaksi.");
-      return;
-    }
     if (isNaN(amountNum) || amountNum <= 0) {
       Alert.alert(
         "Perhatian",
@@ -82,16 +96,20 @@ export const FinanceScreen: React.FC = () => {
       );
       return;
     }
+    if (!transTitle.trim()) {
+      Alert.alert("Perhatian", "Silakan masukkan keterangan transaksi.");
+      return;
+    }
 
     addTransaction({
       title: transTitle.trim(),
-      note: transType === "expense" ? "Pengeluaran" : "Pemasukan",
+      note: transType === "income" ? "Pemasukan" : "Pengeluaran",
       amount: amountNum,
       type: transType,
     });
 
     const formatted = formatRupiah(amountNum);
-    const typeLabel = transType === "expense" ? "Pengeluaran" : "Pemasukan";
+    const typeLabel = transType === "income" ? "Pemasukan" : "Pengeluaran";
 
     setTransTitle("");
     setTransAmount("");
@@ -125,14 +143,15 @@ export const FinanceScreen: React.FC = () => {
   const handleSaveBudget = () => {
     const dNum = parseInt(tempDailyBudget.replace(/[^0-9]/g, ""), 10);
     const mNum = parseInt(tempMonthlyBudget.replace(/[^0-9]/g, ""), 10);
-    if (!isNaN(dNum) && !isNaN(mNum)) {
-      updateFinanceData({
-        dailyBudget: dNum,
-        monthlyBudget: mNum,
-      });
-      setIsEditingBudget(false);
-      showFeedback("Target anggaran berhasil diperbarui!");
-    }
+    const yNum = parseInt(tempYearlyBudget.replace(/[^0-9]/g, ""), 10);
+
+    updateFinanceData({
+      dailyBudget: isNaN(dNum) ? 0 : dNum,
+      monthlyBudget: isNaN(mNum) ? 0 : mNum,
+      yearlyBudget: isNaN(yNum) ? 0 : yNum,
+    });
+    setIsEditingBudget(false);
+    showFeedback("Target anggaran berhasil diperbarui!");
   };
 
   const handleTabSelect = (tab: TabType) => {
@@ -150,8 +169,13 @@ export const FinanceScreen: React.FC = () => {
     <View style={styles.rootContainer}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
 
-      {/* Header */}
-      <View style={styles.header}>
+      {/* 8. Header with Responsive Safe Area & Synchronized Symmetrical BrandLogo */}
+      <View
+        style={[
+          styles.header,
+          { paddingTop: Math.max(insets.top, 12) + 8 },
+        ]}
+      >
         <Pressable
           style={styles.backButton}
           onPress={() => {
@@ -162,12 +186,15 @@ export const FinanceScreen: React.FC = () => {
               router.replace("/" as any);
             }
           }}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Kembali ke Beranda"
         >
           <Ionicons name="arrow-back" size={24} color={Colors.white} />
         </Pressable>
-        <Text style={styles.headerTitle}>Pembudgetan</Text>
+        <Text style={styles.headerTitle}>Mengatur Keuangan</Text>
         <View style={styles.headerRight}>
-          <Text style={styles.brandText}>VORFÍNE</Text>
+          <BrandLogo color={Colors.white} size="medium" />
         </View>
       </View>
 
@@ -177,7 +204,7 @@ export const FinanceScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         {/* Budget Alert Banner */}
-        {isDailyOver || isMonthlyOver ? (
+        {isDailyOver || isMonthlyOver || isYearlyOver ? (
           <View style={[styles.alertBanner, styles.alertBannerDanger]}>
             <Ionicons name="alert-circle" size={24} color="#C0392B" />
             <View style={styles.alertTextWrapper}>
@@ -187,11 +214,13 @@ export const FinanceScreen: React.FC = () => {
               <Text style={styles.alertBannerDesc}>
                 {isDailyOver
                   ? "Pengeluaran harian telah melampaui limit anggaran harian Anda."
-                  : "Pengeluaran bulanan telah melampaui limit anggaran bulanan."}
+                  : isMonthlyOver
+                    ? "Pengeluaran bulanan telah melampaui limit anggaran bulanan."
+                    : "Pengeluaran tahunan telah melampaui limit anggaran tahunan."}
               </Text>
             </View>
           </View>
-        ) : isDailyNear || isMonthlyNear ? (
+        ) : isDailyNear || isMonthlyNear || isYearlyNear ? (
           <View style={[styles.alertBanner, styles.alertBannerWarning]}>
             <Ionicons name="warning-outline" size={24} color="#D97706" />
             <View style={styles.alertTextWrapper}>
@@ -199,8 +228,11 @@ export const FinanceScreen: React.FC = () => {
                 Mendekati Batas Budget (80%)
               </Text>
               <Text style={styles.alertBannerDesc}>
-                Perhatikan pengeluaran harian Anda agar tidak melebihi anggaran
-                yang ditetapkan.
+                {isDailyNear
+                  ? "Pengeluaran harian Anda telah mencapai 80% dari batas harian."
+                  : isMonthlyNear
+                    ? "Pengeluaran bulanan Anda telah mencapai 80% dari batas bulanan."
+                    : "Akumulasi pengeluaran tahun berjalan telah mencapai 80% dari total anggaran tahunan."}
               </Text>
             </View>
           </View>
@@ -243,18 +275,23 @@ export const FinanceScreen: React.FC = () => {
           </Pressable>
         </View>
 
-        {/* Budget Progress & Monitor Card */}
+        {/* 6. Budget Progress & Monitoring Card (Daily, Monthly, and Annual) */}
         <View style={styles.sectionCard}>
           <View style={styles.cardHeaderRow}>
             <View>
               <Text style={styles.cardSectionTitle}>Monitoring Anggaran</Text>
               <Text style={styles.cardSectionSub}>
-                Bulan {financeData.monthName} 2026
+                Bulan {financeData.monthName} 2026 & Tahunan
               </Text>
             </View>
             <Pressable
               style={styles.editBudgetButton}
-              onPress={() => setIsEditingBudget(!isEditingBudget)}
+              onPress={() => {
+                setTempDailyBudget(financeData.dailyBudget.toString());
+                setTempMonthlyBudget(financeData.monthlyBudget.toString());
+                setTempYearlyBudget((financeData.yearlyBudget || 0).toString());
+                setIsEditingBudget(!isEditingBudget);
+              }}
             >
               <Text style={styles.editBudgetText}>
                 {isEditingBudget ? "Batal" : "Atur Budget"}
@@ -270,14 +307,30 @@ export const FinanceScreen: React.FC = () => {
                 keyboardType="numeric"
                 value={tempDailyBudget}
                 onChangeText={setTempDailyBudget}
+                placeholder="Contoh: 100000"
+                placeholderTextColor="#98A2B3"
               />
+
               <Text style={styles.inputLabel}>Batas Budget Bulanan (IDR):</Text>
               <TextInput
                 style={styles.formInput}
                 keyboardType="numeric"
                 value={tempMonthlyBudget}
                 onChangeText={setTempMonthlyBudget}
+                placeholder="Contoh: 3000000"
+                placeholderTextColor="#98A2B3"
               />
+
+              <Text style={styles.inputLabel}>Batas Budget Tahunan (IDR):</Text>
+              <TextInput
+                style={styles.formInput}
+                keyboardType="numeric"
+                value={tempYearlyBudget}
+                onChangeText={setTempYearlyBudget}
+                placeholder="Contoh: 36000000"
+                placeholderTextColor="#98A2B3"
+              />
+
               <Pressable
                 style={styles.saveBudgetBtn}
                 onPress={handleSaveBudget}
@@ -340,19 +393,106 @@ export const FinanceScreen: React.FC = () => {
                   />
                 </View>
               </View>
+
+              {/* 6. Annual Budget Progress (Monitoring Anggaran Tahunan) */}
+              <View style={styles.progressItem}>
+                <View style={styles.progressHeader}>
+                  <View style={styles.annualHeaderTitleRow}>
+                    <Text style={styles.progressLabel}>
+                      Budget Tahunan (2026)
+                    </Text>
+                    {yearlyLimit > 0 && (
+                      <View
+                        style={[
+                          styles.annualBadge,
+                          {
+                            backgroundColor: isYearlyOver
+                              ? "#FEE2E2"
+                              : isYearlyNear
+                                ? "#FEF3C7"
+                                : "#DCFCE7",
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.annualBadgeText,
+                            {
+                              color: isYearlyOver
+                                ? "#DC2626"
+                                : isYearlyNear
+                                  ? "#D97706"
+                                  : "#16A34A",
+                            },
+                          ]}
+                        >
+                          {isYearlyOver
+                            ? "Over Limit"
+                            : isYearlyNear
+                              ? "Mendekati 80%"
+                              : "Terkendali"}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={styles.progressValues}>
+                    {formatRupiah(yearlySpent)} / {formatRupiah(yearlyLimit)} (
+                    {yearlyPercentage}%)
+                  </Text>
+                </View>
+                <View style={styles.progressBarBg}>
+                  <View
+                    style={[
+                      styles.progressBarFill,
+                      {
+                        width: `${yearlyPercentage}%`,
+                        backgroundColor: isYearlyOver
+                          ? "#E74C3C"
+                          : isYearlyNear
+                            ? "#F39C12"
+                            : "#0284C7",
+                      },
+                    ]}
+                  />
+                </View>
+              </View>
             </View>
           )}
         </View>
 
-        {/* Quick Add Transaction Form */}
+        {/* 7. Quick Add Transaction Form (Corrected Layout & Relocated Fields) */}
         <View style={styles.sectionCard}>
           <Text style={styles.cardSectionTitle}>Catat Transaksi Cepat</Text>
           <Text style={styles.cardSectionSub}>
             Pemasukan atau pengeluaran langsung disinkronkan ke saldo
           </Text>
 
-          {/* Type Switcher Tabs */}
+          {/* Type Switcher Tabs: Pemasukan di kiri, Pengeluaran di kanan */}
           <View style={styles.typeSwitcherRow}>
+            {/* Opsi 1: Pemasukan (Kiri) */}
+            <Pressable
+              style={[
+                styles.typeSwitchBtn,
+                transType === "income" && styles.typeSwitchBtnActiveIncome,
+              ]}
+              onPress={() => setTransType("income")}
+            >
+              <Ionicons
+                name="arrow-up-circle"
+                size={18}
+                color={transType === "income" ? Colors.white : "#1E8449"}
+              />
+              <Text
+                style={[
+                  styles.typeSwitchText,
+                  transType === "income" && styles.typeSwitchTextActive,
+                ]}
+              >
+                Pemasukan
+              </Text>
+            </Pressable>
+
+            {/* Opsi 2: Pengeluaran (Kanan) */}
             <Pressable
               style={[
                 styles.typeSwitchBtn,
@@ -374,42 +514,9 @@ export const FinanceScreen: React.FC = () => {
                 Pengeluaran
               </Text>
             </Pressable>
-
-            <Pressable
-              style={[
-                styles.typeSwitchBtn,
-                transType === "income" && styles.typeSwitchBtnActiveIncome,
-              ]}
-              onPress={() => setTransType("income")}
-            >
-              <Ionicons
-                name="arrow-up-circle"
-                size={18}
-                color={transType === "income" ? Colors.white : "#1E8449"}
-              />
-              <Text
-                style={[
-                  styles.typeSwitchText,
-                  transType === "income" && styles.typeSwitchTextActive,
-                ]}
-              >
-                Pemasukkan
-              </Text>
-            </Pressable>
           </View>
 
-          {/* Form Fields */}
-          <View style={styles.formGroup}>
-            <Text style={styles.inputLabel}>Deskripsi / Keterangan</Text>
-            <TextInput
-              style={styles.formInput}
-              placeholder="Contoh: Beli makan siang, Gaji bulanan..."
-              placeholderTextColor="#98A2B3"
-              value={transTitle}
-              onChangeText={setTransTitle}
-            />
-          </View>
-
+          {/* Form Fields: Nominal (Rp) di atas, Deskripsi tepat di bawahnya */}
           <View style={styles.formGroup}>
             <Text style={styles.inputLabel}>Nominal (Rp)</Text>
             <TextInput
@@ -422,12 +529,23 @@ export const FinanceScreen: React.FC = () => {
             />
           </View>
 
+          <View style={styles.formGroup}>
+            <Text style={styles.inputLabel}>Deskripsi / Keterangan</Text>
+            <TextInput
+              style={styles.formInput}
+              placeholder="Contoh: Beli makan siang, Gaji bulanan..."
+              placeholderTextColor="#98A2B3"
+              value={transTitle}
+              onChangeText={setTransTitle}
+            />
+          </View>
+
           <Pressable
             style={styles.submitTransBtn}
             onPress={handleSaveTransaction}
           >
             <Text style={styles.submitTransBtnText}>
-              Simpan {transType === "expense" ? "Pengeluaran" : "Pemasukan"}
+              Simpan {transType === "income" ? "Pemasukan" : "Pengeluaran"}
             </Text>
           </Pressable>
         </View>
@@ -446,38 +564,38 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: Colors.primary,
-    paddingTop: Platform.OS === "ios" ? 50 : 20,
     paddingBottom: Spacing.md,
     paddingHorizontal: Spacing.lg,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    minHeight: 48,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0,0,0,0.05)",
   },
   backButton: {
     width: 36,
     height: 36,
     justifyContent: "center",
+    alignItems: "flex-start",
   },
   headerTitle: {
     color: Colors.white,
-    fontSize: 16.5,
+    fontSize: 17,
     fontWeight: "700",
+    letterSpacing: 0.3,
   },
   headerRight: {
-    paddingRight: 4,
-  },
-  brandText: {
-    color: Colors.white,
-    fontSize: 14,
-    fontWeight: "800",
-    letterSpacing: 1.2,
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 44,
   },
   scrollArea: {
     flex: 1,
   },
   scrollContent: {
     padding: Spacing.lg,
-    paddingBottom: Spacing.xxl,
+    paddingBottom: Spacing.xxl + 10,
   },
   alertBanner: {
     flexDirection: "row",
@@ -504,10 +622,12 @@ const styles = StyleSheet.create({
     color: "#C0392B",
     fontSize: 13.5,
     fontWeight: "700",
+    lineHeight: 18,
   },
   alertBannerDesc: {
     color: "#7F8C8D",
     fontSize: 12,
+    lineHeight: 16,
     marginTop: 2,
   },
   quickLinksRow: {
@@ -548,11 +668,15 @@ const styles = StyleSheet.create({
   sectionCard: {
     backgroundColor: Colors.white,
     borderRadius: BorderRadius.xl,
-    padding: Spacing.md + 2,
+    padding: Spacing.md + 4,
     borderWidth: 1,
     borderColor: "#D0D5DD",
     marginBottom: Spacing.md,
     elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
   },
   cardHeaderRow: {
     flexDirection: "row",
@@ -564,10 +688,12 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     fontSize: 15.5,
     fontWeight: "700",
+    letterSpacing: 0.2,
   },
   cardSectionSub: {
     color: "#667085",
     fontSize: 12,
+    lineHeight: 16,
     marginTop: 2,
   },
   editBudgetButton: {
@@ -590,6 +716,21 @@ const styles = StyleSheet.create({
   progressHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
+  },
+  annualHeaderTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  annualBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  annualBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
   },
   progressLabel: {
     fontSize: 12.5,
@@ -660,6 +801,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: Platform.OS === "ios" ? 10 : 8,
     fontSize: 13,
+    lineHeight: 18,
     color: Colors.textPrimary,
   },
   submitTransBtn: {
@@ -673,6 +815,7 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontWeight: "700",
     fontSize: 13.5,
+    letterSpacing: 0.2,
   },
   editBudgetForm: {
     gap: Spacing.sm,

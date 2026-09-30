@@ -75,7 +75,7 @@ export const Colors = {
       border: "#F9E79F",
       text: "#B7950B",
     },
-    keuangan: {
+    lainnya: {
       bg: "#EAFaf1",
       border: "#A9DFBF",
       text: "#1E8449",

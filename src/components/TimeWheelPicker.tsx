@@ -16,6 +16,7 @@ interface TimeWheelPickerProps {
   visible: boolean;
   title: string;
   initialTime?: string; // e.g. "08.00 WIB" or "08:00"
+  minTime?: string; // Minimum allowable time e.g. "08.00 WIB"
   onClose: () => void;
   onConfirm: (formattedTime: string) => void;
 }
@@ -33,6 +34,7 @@ export const TimeWheelPicker: React.FC<TimeWheelPickerProps> = ({
   visible,
   title,
   initialTime = "00.00 WIB",
+  minTime,
   onClose,
   onConfirm,
 }) => {
@@ -44,6 +46,17 @@ export const TimeWheelPicker: React.FC<TimeWheelPickerProps> = ({
   const hourDebounceRef = useRef<any>(null);
   const minuteDebounceRef = useRef<any>(null);
 
+  // Parse minTime
+  const minParsed = React.useMemo(() => {
+    if (!minTime) return null;
+    const match = minTime.match(/(\d{1,2})[.:](\d{1,2})/);
+    if (!match) return null;
+    return {
+      hour: Math.min(23, Math.max(0, parseInt(match[1], 10) || 0)),
+      minute: Math.min(59, Math.max(0, parseInt(match[2], 10) || 0)),
+    };
+  }, [minTime]);
+
   // Parse initialTime on open
   useEffect(() => {
     if (visible) {
@@ -53,6 +66,14 @@ export const TimeWheelPicker: React.FC<TimeWheelPickerProps> = ({
       if (match) {
         h = Math.min(23, Math.max(0, parseInt(match[1], 10) || 0));
         m = Math.min(59, Math.max(0, parseInt(match[2], 10) || 0));
+      }
+      if (minParsed) {
+        if (h < minParsed.hour) {
+          h = minParsed.hour;
+          m = minParsed.minute;
+        } else if (h === minParsed.hour && m < minParsed.minute) {
+          m = minParsed.minute;
+        }
       }
       setSelectedHour(h);
       setSelectedMinute(m);
@@ -80,16 +101,33 @@ export const TimeWheelPicker: React.FC<TimeWheelPickerProps> = ({
   if (!visible) return null;
 
   const scrollToHour = (h: number, animated = true) => {
-    const clamped = Math.max(0, Math.min(23, h));
+    let clamped = Math.max(0, Math.min(23, h));
+    if (minParsed && clamped < minParsed.hour) {
+      clamped = minParsed.hour;
+    }
     setSelectedHour(clamped);
     hourScrollRef.current?.scrollTo({
       y: clamped * ITEM_HEIGHT,
       animated,
     });
+    if (
+      minParsed &&
+      clamped === minParsed.hour &&
+      selectedMinute < minParsed.minute
+    ) {
+      scrollToMinute(minParsed.minute, animated);
+    }
   };
 
   const scrollToMinute = (m: number, animated = true) => {
-    const clamped = Math.max(0, Math.min(59, m));
+    let clamped = Math.max(0, Math.min(59, m));
+    if (
+      minParsed &&
+      selectedHour === minParsed.hour &&
+      clamped < minParsed.minute
+    ) {
+      clamped = minParsed.minute;
+    }
     setSelectedMinute(clamped);
     minuteScrollRef.current?.scrollTo({
       y: clamped * ITEM_HEIGHT,
@@ -100,8 +138,23 @@ export const TimeWheelPicker: React.FC<TimeWheelPickerProps> = ({
   const handleHourScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const y = e.nativeEvent.contentOffset.y;
     const index = Math.round(y / ITEM_HEIGHT);
-    const clamped = Math.max(0, Math.min(23, index));
+    let clamped = Math.max(0, Math.min(23, index));
+    if (minParsed && clamped < minParsed.hour) {
+      clamped = minParsed.hour;
+    }
     setSelectedHour(clamped);
+
+    if (
+      minParsed &&
+      clamped === minParsed.hour &&
+      selectedMinute < minParsed.minute
+    ) {
+      setSelectedMinute(minParsed.minute);
+      minuteScrollRef.current?.scrollTo({
+        y: minParsed.minute * ITEM_HEIGHT,
+        animated: true,
+      });
+    }
 
     if (Platform.OS === "web") {
       clearTimeout(hourDebounceRef.current);
@@ -117,7 +170,14 @@ export const TimeWheelPicker: React.FC<TimeWheelPickerProps> = ({
   const handleMinuteScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const y = e.nativeEvent.contentOffset.y;
     const index = Math.round(y / ITEM_HEIGHT);
-    const clamped = Math.max(0, Math.min(59, index));
+    let clamped = Math.max(0, Math.min(59, index));
+    if (
+      minParsed &&
+      selectedHour === minParsed.hour &&
+      clamped < minParsed.minute
+    ) {
+      clamped = minParsed.minute;
+    }
     setSelectedMinute(clamped);
 
     if (Platform.OS === "web") {
@@ -132,8 +192,18 @@ export const TimeWheelPicker: React.FC<TimeWheelPickerProps> = ({
   };
 
   const handleConfirm = () => {
+    let finalH = selectedHour;
+    let finalM = selectedMinute;
+    if (minParsed) {
+      if (finalH < minParsed.hour) {
+        finalH = minParsed.hour;
+        finalM = minParsed.minute;
+      } else if (finalH === minParsed.hour && finalM < minParsed.minute) {
+        finalM = minParsed.minute;
+      }
+    }
     const pad = (n: number) => String(n).padStart(2, "0");
-    const formatted = `${pad(selectedHour)}.${pad(selectedMinute)} WIB`;
+    const formatted = `${pad(finalH)}.${pad(finalM)} WIB`;
     onConfirm(formatted);
     onClose();
   };
@@ -211,12 +281,14 @@ export const TimeWheelPicker: React.FC<TimeWheelPickerProps> = ({
                 {HOURS.map((hour) => {
                   const isSelected = hour === selectedHour;
                   const distance = Math.abs(hour - selectedHour);
+                  const isDisabled = Boolean(minParsed && hour < minParsed.hour);
 
                   return (
                     <Pressable
                       key={hour}
-                      style={styles.wheelItem}
-                      onPress={() => scrollToHour(hour)}
+                      style={[styles.wheelItem, isDisabled && { opacity: 0.25 }]}
+                      onPress={() => !isDisabled && scrollToHour(hour)}
+                      disabled={isDisabled}
                     >
                       <Text
                         style={[
@@ -224,6 +296,7 @@ export const TimeWheelPicker: React.FC<TimeWheelPickerProps> = ({
                           isSelected && styles.wheelItemTextActive,
                           distance === 1 && styles.wheelItemTextNeighbor1,
                           distance >= 2 && styles.wheelItemTextNeighbor2,
+                          isDisabled && { color: "#D0D5DD" },
                         ]}
                       >
                         {formatDisplay(hour)}
@@ -279,12 +352,18 @@ export const TimeWheelPicker: React.FC<TimeWheelPickerProps> = ({
                 {MINUTES.map((minute) => {
                   const isSelected = minute === selectedMinute;
                   const distance = Math.abs(minute - selectedMinute);
+                  const isDisabled = Boolean(
+                    minParsed &&
+                      selectedHour === minParsed.hour &&
+                      minute < minParsed.minute,
+                  );
 
                   return (
                     <Pressable
                       key={minute}
-                      style={styles.wheelItem}
-                      onPress={() => scrollToMinute(minute)}
+                      style={[styles.wheelItem, isDisabled && { opacity: 0.25 }]}
+                      onPress={() => !isDisabled && scrollToMinute(minute)}
+                      disabled={isDisabled}
                     >
                       <Text
                         style={[
@@ -292,6 +371,7 @@ export const TimeWheelPicker: React.FC<TimeWheelPickerProps> = ({
                           isSelected && styles.wheelItemTextActive,
                           distance === 1 && styles.wheelItemTextNeighbor1,
                           distance >= 2 && styles.wheelItemTextNeighbor2,
+                          isDisabled && { color: "#D0D5DD" },
                         ]}
                       >
                         {formatDisplay(minute)}
@@ -306,7 +386,9 @@ export const TimeWheelPicker: React.FC<TimeWheelPickerProps> = ({
               style={styles.stepBtnBottom}
               onPress={() => scrollToMinute(selectedMinute + 1)}
               hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-            ></Pressable>
+            >
+              <Ionicons name="chevron-down" size={14} color="#667085" />
+            </Pressable>
           </View>
         </View>
 
@@ -316,16 +398,27 @@ export const TimeWheelPicker: React.FC<TimeWheelPickerProps> = ({
           <View style={styles.chipsGroup}>
             {QUICK_MINUTES.map((m) => {
               const isActive = selectedMinute === m;
+              const isDisabled = Boolean(
+                minParsed &&
+                  selectedHour === minParsed.hour &&
+                  m < minParsed.minute,
+              );
               return (
                 <Pressable
                   key={m}
-                  style={[styles.quickChip, isActive && styles.quickChipActive]}
-                  onPress={() => scrollToMinute(m)}
+                  style={[
+                    styles.quickChip,
+                    isActive && styles.quickChipActive,
+                    isDisabled && { opacity: 0.3 },
+                  ]}
+                  onPress={() => !isDisabled && scrollToMinute(m)}
+                  disabled={isDisabled}
                 >
                   <Text
                     style={[
                       styles.quickChipText,
                       isActive && styles.quickChipTextActive,
+                      isDisabled && { color: "#98A2B3" },
                     ]}
                   >
                     :{formatDisplay(m)}
