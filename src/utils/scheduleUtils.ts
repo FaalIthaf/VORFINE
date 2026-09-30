@@ -2,7 +2,7 @@ import { ScheduleItem } from "../types";
 
 /**
  * Extracts the start time in minutes from midnight (0 - 1439).
- * Supports startTime (e.g. "05:00", "05.00", "5:00") and
+ * Supports startTime (e.g. "05:00", "05.00", "5:00", "05.00 WIB", "23:00") and
  * fallback to extracting from time string (e.g. "05.00 - 06.00 WIB").
  */
 export const getScheduleStartMinutes = (item: ScheduleItem): number => {
@@ -24,7 +24,7 @@ export const getScheduleStartMinutes = (item: ScheduleItem): number => {
     }
   }
 
-  return 0;
+  return 9999;
 };
 
 /**
@@ -50,7 +50,7 @@ export const getScheduleEndMinutes = (item: ScheduleItem): number => {
     }
   }
 
-  return 0;
+  return 9999;
 };
 
 /**
@@ -74,5 +74,18 @@ export const sortSchedulesByTime = (
     return endA - endB;
   }
 
-  return a.title.localeCompare(b.title);
+  return (a.title || "").localeCompare(b.title || "");
+};
+
+/**
+ * Comparator function to sort schedules chronologically across dates and times.
+ */
+export const sortSchedulesChronologically = (
+  a: ScheduleItem,
+  b: ScheduleItem,
+): number => {
+  if (a.dateKey && b.dateKey && a.dateKey !== b.dateKey) {
+    return a.dateKey.localeCompare(b.dateKey);
+  }
+  return sortSchedulesByTime(a, b);
 };
