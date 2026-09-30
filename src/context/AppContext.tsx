@@ -7,12 +7,16 @@ import {
   TransactionItem,
   TransactionType,
 } from "../types";
-import { sortSchedulesByTime } from "../utils/scheduleUtils";
+import {
+  sortSchedulesByTime,
+  sortSchedulesChronologically,
+} from "../utils/scheduleUtils";
 
 export interface AppContextType {
   // Schedules
   schedules: ScheduleItem[];
   addSchedule: (item: Omit<ScheduleItem, "id" | "completed">) => void;
+  updateSchedule: (id: string, updatedFields: Partial<ScheduleItem>) => void;
   deleteSchedule: (id: string) => void;
   toggleCompleteSchedule: (id: string) => void;
 
@@ -128,80 +132,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
   ]);
   const [selectedProfileId, setSelectedProfileId] = useState<string>("1");
 
-  // Finance
+  // Finance - Initial values reset to 0
   const [financeData, setFinanceData] = useState<FinanceData>({
-    totalBalance: 300000,
-    dailyExpense: 100000,
-    monthlyIncome: 3700000,
-    monthlyExpense: 350000,
+    totalBalance: 0,
+    dailyExpense: 0,
+    monthlyIncome: 0,
+    monthlyExpense: 0,
     monthName: "September",
-    dailyBudget: 150000,
-    monthlyBudget: 2500000,
+    dailyBudget: 0,
+    monthlyBudget: 0,
   });
 
-  // Transactions State
-  const [transactions, setTransactions] = useState<TransactionItem[]>([
-    {
-      id: "inc-2",
-      title: "Uang Masuk",
-      note: "Gaji bulanan",
-      date: "1 Sep 2026, 09:00 WIB",
-      amount: "Rp 3.400.000,00",
-      balance: "Saldo: 3.700.000,00",
-      type: "income",
-      rawDate: "2026-09-01T09:00:00.000Z",
-      timestamp: new Date("2026-09-01T09:00:00.000Z").getTime(),
-      numericAmount: 3400000,
-    },
-    {
-      id: "exp-3",
-      title: "Uang Keluar",
-      note: "beli makan siang",
-      date: "1 Sep 2026, 12:30 WIB",
-      amount: "Rp 50.000,00",
-      balance: "Saldo: 3.650.000,00",
-      type: "expense",
-      rawDate: "2026-09-01T12:30:00.000Z",
-      timestamp: new Date("2026-09-01T12:30:00.000Z").getTime(),
-      numericAmount: 50000,
-    },
-    {
-      id: "exp-2",
-      title: "Uang Keluar",
-      note: "beli barang shopee",
-      date: "1 Sep 2026, 15:45 WIB",
-      amount: "Rp 250.000,00",
-      balance: "Saldo: 3.400.000,00",
-      type: "expense",
-      rawDate: "2026-09-01T15:45:00.000Z",
-      timestamp: new Date("2026-09-01T15:45:00.000Z").getTime(),
-      numericAmount: 250000,
-    },
-    {
-      id: "exp-1",
-      title: "Uang Keluar",
-      note: "beli makan malam",
-      date: "1 Sep 2026, 19:20 WIB",
-      amount: "Rp 50.000,00",
-      balance: "Saldo: 3.350.000,00",
-      type: "expense",
-      rawDate: "2026-09-01T19:20:00.000Z",
-      timestamp: new Date("2026-09-01T19:20:00.000Z").getTime(),
-      numericAmount: 50000,
-    },
-    {
-      id: "inc-1",
-      title: "Saldo Awal",
-      note: "Saldo pembukaan",
-      date: "1 Sep 2026, 08:00 WIB",
-      amount: "Rp 300.000,00",
-      balance: "Saldo: 300.000,00",
-      type: "income",
-      rawDate: "2026-09-01T08:00:00.000Z",
-      timestamp: new Date("2026-09-01T08:00:00.000Z").getTime(),
-      numericAmount: 300000,
-    },
-  ]);
+  // Transactions State - Initial state empty
+  const [transactions, setTransactions] = useState<TransactionItem[]>([]);
 
   // Transaction Actions with Real-time Timestamp
   const addTransaction = (item: {
@@ -263,69 +206,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     setTransactions((prev) => prev.filter((item) => item.id !== id));
   };
 
-  // Schedules initial data matching both day 18 and day 26
-  const [schedules, setSchedules] = useState<ScheduleItem[]>([
-    {
-      id: "1",
-      dateKey: "2026-09-18",
-      time: "05.00 - 06.00 WIB",
-      title: "Sarapan Pagi",
-      category: "Rutinitas",
-      completed: true,
-      alarmEnabled: true,
-      reminderTime: "10 Menit Sebelum",
-      startTime: "05:00",
-      endTime: "06:00",
-    },
-    {
-      id: "2",
-      dateKey: "2026-09-18",
-      time: "07.00 - 07.30 WIB",
-      title: "Berangkat ke kantor",
-      category: "Domestik",
-      completed: true,
-      alarmEnabled: false,
-      reminderTime: "15 Menit Sebelum",
-      startTime: "07:00",
-      endTime: "07:30",
-    },
-    {
-      id: "3",
-      dateKey: "2026-09-18",
-      time: "08.00 - 16.00",
-      title: "Kerja",
-      category: "Pekerjaan",
-      completed: true,
-      alarmEnabled: true,
-      reminderTime: "30 Menit Sebelum",
-      startTime: "08:00",
-      endTime: "16:00",
-    },
-    {
-      id: "4",
-      dateKey: "2026-09-18",
-      time: "08.00 - 16.00",
-      title: "Kerja",
-      category: "Keuangan",
-      completed: true,
-      alarmEnabled: false,
-      reminderTime: "10 Menit Sebelum",
-      startTime: "08:00",
-      endTime: "16:00",
-    },
-    {
-      id: "5",
-      dateKey: "2026-09-26",
-      time: "09.00 - 11.00 WIB",
-      title: "Review Budget & Tabungan",
-      category: "Keuangan",
-      completed: false,
-      alarmEnabled: true,
-      reminderTime: "15 Menit Sebelum",
-      startTime: "09:00",
-      endTime: "11:00",
-    },
-  ]);
+  // Schedules initial data - Initial state empty
+  const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
 
   // Compute selected date key
   const formatPad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
@@ -367,7 +249,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       completed: false,
       dateKey: item.dateKey || selectedDateKey,
     };
-    setSchedules((prev) => [...prev, newItem]);
+    setSchedules((prev) => [...prev, newItem].sort(sortSchedulesChronologically));
+  };
+
+  const updateSchedule = (id: string, updatedFields: Partial<ScheduleItem>) => {
+    setSchedules((prev) =>
+      prev
+        .map((item) => (item.id === id ? { ...item, ...updatedFields } : item))
+        .sort(sortSchedulesChronologically),
+    );
   };
 
   const deleteSchedule = (id: string) => {
@@ -427,6 +317,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       value={{
         schedules,
         addSchedule,
+        updateSchedule,
         deleteSchedule,
         toggleCompleteSchedule,
         currentYear,
