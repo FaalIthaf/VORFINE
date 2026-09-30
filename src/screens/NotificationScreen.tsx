@@ -1,24 +1,24 @@
 import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
-    Alert,
-    Platform,
-    RefreshControl,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    ToastAndroid,
-    View,
+  Alert,
+  Platform,
+  RefreshControl,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  ToastAndroid,
+  View,
 } from "react-native";
 import { NotificationCard } from "../components/NotificationCard";
 import { NotificationFilterBar } from "../components/NotificationFilterBar";
 import { NotificationHeader } from "../components/NotificationHeader";
 import {
-    BorderRadius,
-    Colors,
-    MaxContentWidth,
-    Spacing,
+  BorderRadius,
+  Colors,
+  MaxContentWidth,
+  Spacing,
 } from "../constants/theme";
 import { NotificationItem } from "../types";
 
@@ -30,79 +30,7 @@ export const NotificationScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState<boolean>(false);
 
   // Mock data notifikasi sesuai spesifikasi dan mock-up UI
-  const [notifications, setNotifications] = useState<NotificationItem[]>([
-    // Notifikasi Belum Dibaca (Ditampilkan saat Checkbox DICENTANG - Layar Kiri)
-    {
-      id: "unread-1",
-      message:
-        "ALERT BUDGET: Pengeluaran Harian anda telah mencapai >=70 % dari pengaturan budget anda.",
-      time: "09.22",
-      isRead: false,
-    },
-    {
-      id: "unread-2",
-      message: "PENGINGAT JADWAL: Sarapan pagi jam 05.00 WIB.",
-      time: "09.22",
-      isRead: false,
-    },
-    {
-      id: "unread-3",
-      message:
-        "ALERT BUDGET: Pengeluaran Bulanan anda telah mencapai >=70 % dari pengaturan budget anda.",
-      time: "09.22",
-      isRead: false,
-    },
-    {
-      id: "unread-4",
-      message:
-        "ALERT BUDGET: Pengeluaran Harian anda telah mencapai >=70 % dari pengaturan budget anda.",
-      time: "09.22",
-      isRead: false,
-    },
-    {
-      id: "unread-5",
-      message:
-        "ALERT BUDGET: Pengeluaran Tahunan anda telah mencapai >=70 % dari pengaturan budget anda.",
-      time: "09.22",
-      isRead: false,
-    },
-
-    // Notifikasi Sudah Dibaca (Ditampilkan saat Checkbox TIDAK DICENTANG - Layar Kanan)
-    {
-      id: "read-1",
-      message:
-        "ALERT BUDGET: Pengeluaran Harian anda telah mencapai >=70 % dari pengaturan budget anda.",
-      time: "09.22",
-      isRead: true,
-    },
-    {
-      id: "read-2",
-      message: "PENGINGAT JADWAL: Berangkat ke kantor jam 07.00 WIB.",
-      time: "09.22",
-      isRead: true,
-    },
-    {
-      id: "read-3",
-      message:
-        "ALERT BUDGET: Pengeluaran Bulanan anda telah mencapai >=70 % dari pengaturan budget anda.",
-      time: "09.22",
-      isRead: true,
-    },
-    {
-      id: "read-4",
-      message:
-        "ALERT BUDGET: Pengeluaran Harian anda telah mencapai >=70 % dari pengaturan budget anda.",
-      time: "09.22",
-      isRead: true,
-    },
-    {
-      id: "read-5",
-      message:
-        "ALERT BUDGET: Pengeluaran Harian anda telah mencapai >=70 % dari pengaturan budget anda.",
-      time: "09.22",
-      isRead: true,
-    },
-  ]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
   const showFeedback = (msg: string) => {
     if (Platform.OS === "android") {

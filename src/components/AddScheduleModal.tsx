@@ -115,11 +115,6 @@ export const AddScheduleModal: React.FC<AddScheduleModalProps> = ({
           >
             <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
               <View style={styles.bottomSheet}>
-                {/* Drag Indicator Bar */}
-                <View style={styles.indicatorContainer}>
-                  <View style={styles.dragIndicator} />
-                </View>
-
                 {/* Title */}
                 <Text style={styles.sheetTitle}>Tambah Jadwal Baru</Text>
 
@@ -205,13 +200,6 @@ export const AddScheduleModal: React.FC<AddScheduleModalProps> = ({
                   {/* Field 3: Jenis Aktivitas & Kategori */}
                   <View style={styles.fieldGroup}>
                     <Text style={styles.fieldLabel}>Jenis Aktivitas</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      placeholder="Masukkan Aktivitas Anda"
-                      placeholderTextColor="#98A2B3"
-                      value={activityDescription}
-                      onChangeText={setActivityDescription}
-                    />
 
                     {/* Category Quick Chips */}
                     <View style={styles.categoryChipsRow}>
@@ -266,6 +254,11 @@ export const AddScheduleModal: React.FC<AddScheduleModalProps> = ({
                           <Text style={styles.reminderDropdownText}>
                             {reminderTime}
                           </Text>
+                          <Ionicons
+                            name="chevron-down"
+                            size={14}
+                            color={Colors.textPrimary}
+                          />
                         </Pressable>
                       </View>
                     )}
