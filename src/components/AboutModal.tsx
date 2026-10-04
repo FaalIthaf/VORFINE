@@ -30,7 +30,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({
   onClose,
   appInfo = DEFAULT_APP_INFO,
   changelogs = DEFAULT_CHANGELOGS,
-  currentProfileName = "Muhammad Ivan Fadholli",
+  currentProfileName = "Pengguna VORFÍNE",
   onPressProfile,
   onPressNotification,
   activeNavTab = "menu",

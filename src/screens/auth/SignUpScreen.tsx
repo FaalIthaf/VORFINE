@@ -25,12 +25,12 @@ export const SignUpScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const { register } = useAuth();
 
-  const [fullName, setFullName] = useState("Muhammad Ivan Fadholli");
-  const [email, setEmail] = useState("ivan@vorfine.com");
-  const [phone, setPhone] = useState("+62 812-3456-7890");
-  const [password, setPassword] = useState("Secret@123!");
-  const [confirmPassword, setConfirmPassword] = useState("Secret@123!");
-  const [agreeTerms, setAgreeTerms] = useState(true);
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [agreeTerms, setAgreeTerms] = useState(false);
   const [enableBiometrics, setEnableBiometrics] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -146,7 +146,7 @@ export const SignUpScreen: React.FC = () => {
               label="Nama Lengkap"
               value={fullName}
               onChangeText={setFullName}
-              placeholder="Muhammad Ivan Fadholli"
+              placeholder="Nama lengkap Anda"
               leftIcon={<Ionicons name="person-outline" size={18} color="#94A3B8" />}
             />
 

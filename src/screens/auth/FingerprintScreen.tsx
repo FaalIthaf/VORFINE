@@ -94,11 +94,11 @@ export const FingerprintScreen: React.FC = () => {
       >
         {/* User Capsule Bar */}
         <UserCapsuleBar
-          name={user?.fullName || "Muhammad Ivan Fadholli"}
+          name={user?.fullName || "Pengguna VORFÍNE"}
           subtitle="IDR ••••••••"
           badgeLabel="Sesi Aktif"
           badgeType="session"
-          avatarInitials={user?.avatar || "MF"}
+          avatarInitials={user?.avatar || "VF"}
         />
 
         {/* Main Title Block */}

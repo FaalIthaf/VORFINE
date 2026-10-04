@@ -39,7 +39,7 @@ export interface InfoScreenProps {
 export const InfoScreen: React.FC<InfoScreenProps> = ({
   appInfo = DEFAULT_APP_INFO,
   changelogs = DEFAULT_CHANGELOGS,
-  currentProfileName = "Muhammad Ivan Fadholli",
+  currentProfileName = "Pengguna VORFÍNE",
   onPressProfile,
   onPressNotification,
   hasUnreadNotification = true,

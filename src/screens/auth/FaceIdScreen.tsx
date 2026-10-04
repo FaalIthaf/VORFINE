@@ -99,11 +99,11 @@ export const FaceIdScreen: React.FC = () => {
       >
         {/* User Capsule Bar */}
         <UserCapsuleBar
-          name={user?.fullName || "Muhammad Ivan Fadholli"}
+          name={user?.fullName || "Pengguna VORFÍNE"}
           subtitle="Status: Terverifikasi"
           badgeLabel="BIOMETRIK"
           badgeType="biometric"
-          avatarInitials={user?.avatar || "MF"}
+          avatarInitials={user?.avatar || "VF"}
         />
 
         {/* Safe Auth Badge Pill */}

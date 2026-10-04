@@ -25,6 +25,7 @@ import {
 
 import { loadData, saveData, STORAGE_KEYS } from "../utils/storage";
 import * as Notifications from "expo-notifications";
+import { useAuth } from "./AuthContext";
 export interface AppContextType {
   // Real-time Time & Synchronization
   currentTime: Date;
@@ -167,6 +168,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
+  const { user } = useAuth();
   // Navigation State
   const [activeTab, setActiveTab] = useState<TabType>("home");
 
@@ -203,7 +205,17 @@ useEffect(() => {
 useEffect(() => {
   (async () => {
     const loadedProfiles = await loadData(STORAGE_KEYS.PROFILES, [] as Profile[]);
-    if (loadedProfiles.length) setProfiles(loadedProfiles);
+    if (loadedProfiles.length) {
+      if (user?.fullName) {
+        setProfiles(
+          loadedProfiles.map((p) =>
+            p.id === "1" ? { ...p, name: user.fullName } : p
+          )
+        );
+      } else {
+        setProfiles(loadedProfiles);
+      }
+    }
     const loadedSelected = await loadData(STORAGE_KEYS.SELECTED_PROFILE, "1");
     setSelectedProfileId(loadedSelected);
     const loadedFinance = await loadData(STORAGE_KEYS.FINANCE, {} as Record<string, FinanceData>);
@@ -240,13 +252,22 @@ useEffect(() => {
   // Search query
   const [searchQuery, setSearchQuery] = useState<string>("");
 
-  // Profiles State
+  // Profiles State (profile 1 is dynamically mapped to registered user's full name)
   const [profiles, setProfiles] = useState<Profile[]>([
-    { id: "1", name: "Muhammad Ivan Fadholli", isCurrent: true },
+    { id: "1", name: user?.fullName || "Profil Utama", isCurrent: true },
     { id: "2", name: "Akun Bisnis / Toko", isCurrent: false },
     { id: "3", name: "Tabungan Pribadi", isCurrent: false },
   ]);
   const [selectedProfileId, setSelectedProfileId] = useState<string>("1");
+
+  // Dynamically sync profile 1 when active user profile changes
+  useEffect(() => {
+    if (user?.fullName) {
+      setProfiles((prev) =>
+        prev.map((p) => (p.id === "1" ? { ...p, name: user.fullName } : p))
+      );
+    }
+  }, [user?.fullName]);
 
   // 9. Isolated State Partitioned by Profile ID
   const [financeByProfile, setFinanceByProfile] = useState<

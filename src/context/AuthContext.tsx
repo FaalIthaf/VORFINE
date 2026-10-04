@@ -1,15 +1,29 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { User } from "../types";
+import {
+  deleteSecure,
+  loadSecureJSON,
+  saveSecureJSON,
+  SECURE_KEYS,
+} from "../utils/storage";
 
-const AUTH_STORAGE_KEY = "vorfine_user_auth_state_v1";
+export interface RegisteredUser {
+  email: string;
+  password: string;
+  user: User;
+}
 
 export interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   rememberMe: boolean;
-  login: (email: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; message?: string }>;
+  hasRegisteredUsers: boolean;
+  login: (
+    emailOrUsername: string,
+    password: string,
+    rememberMe?: boolean
+  ) => Promise<{ success: boolean; message?: string }>;
   register: (data: {
     fullName: string;
     email: string;
@@ -24,97 +38,127 @@ export interface AuthContextType {
   updateProfile: (updated: Partial<User>) => Promise<void>;
 }
 
-const DEFAULT_USER: User = {
-  id: "usr_01",
-  fullName: "Muhammad Ivan Fadholli",
-  email: "contoh@vorfine.com",
-  phone: "+62 812-9876-5432",
-  role: "Warga Terverifikasi",
-  avatar: "MF",
-  biometricsEnabled: true,
-  smartNotifications: true,
-  sensor3DActive: true,
-  encryptionStandard: "AES-256",
-  securitySessionActive: true,
-};
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [user, setUser] = useState<User | null>(DEFAULT_USER);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
-  const [rememberMe, setRememberMe] = useState<boolean>(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [rememberMe, setRememberMe] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [hasRegisteredUsers, setHasRegisteredUsers] = useState<boolean>(false);
 
-  // Load saved session on mount
+  // ─── Get all registered users from Secure Storage ────────────────
+  const getRegisteredUsers = async (): Promise<RegisteredUser[]> => {
+    return await loadSecureJSON<RegisteredUser[]>(
+      SECURE_KEYS.REGISTERED_USERS,
+      []
+    );
+  };
+
+  // ─── Save registered users list to Secure Storage ────────────────
+  const saveRegisteredUsers = async (
+    users: RegisteredUser[]
+  ): Promise<void> => {
+    await saveSecureJSON(SECURE_KEYS.REGISTERED_USERS, users);
+  };
+
+  // ─── Persist session to Secure Storage ────────────────────────────
+  const saveSession = async (
+    activeUser: User,
+    remMe: boolean
+  ): Promise<void> => {
+    await saveSecureJSON(SECURE_KEYS.SESSION_TOKEN, {
+      user: activeUser,
+      rememberMe: remMe,
+      token: `vf_sec_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+    });
+  };
+
+  // ─── Load saved session and registered users on mount ────────────
   useEffect(() => {
     (async () => {
       try {
-        const stored = await AsyncStorage.getItem(AUTH_STORAGE_KEY);
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (parsed.user) {
-            setUser(parsed.user);
-            setIsAuthenticated(parsed.isAuthenticated ?? true);
-            setRememberMe(parsed.rememberMe ?? true);
-          }
+        const registeredUsers = await getRegisteredUsers();
+        setHasRegisteredUsers(registeredUsers.length > 0);
+
+        // Check if an encrypted session exists in SecureStore
+        const sessionData = await loadSecureJSON<{
+          user: User;
+          rememberMe: boolean;
+          token?: string;
+        } | null>(SECURE_KEYS.SESSION_TOKEN, null);
+
+        if (sessionData && sessionData.user) {
+          setUser(sessionData.user);
+          setIsAuthenticated(true);
+          setRememberMe(sessionData.rememberMe ?? true);
+        } else {
+          // No valid session — user must authenticate
+          setUser(null);
+          setIsAuthenticated(false);
         }
       } catch (err) {
-        console.warn("Failed to load auth session:", err);
+        console.warn("Failed to load auth session from SecureStore:", err);
+        setUser(null);
+        setIsAuthenticated(false);
       } finally {
         setIsLoading(false);
       }
     })();
   }, []);
 
-  const saveAuthSession = async (updatedUser: User | null, isAuth: boolean, rem: boolean) => {
-    try {
-      if (rem && updatedUser) {
-        await AsyncStorage.setItem(
-          AUTH_STORAGE_KEY,
-          JSON.stringify({ user: updatedUser, isAuthenticated: isAuth, rememberMe: rem })
-        );
-      } else {
-        await AsyncStorage.removeItem(AUTH_STORAGE_KEY);
-      }
-    } catch (err) {
-      console.warn("Failed to save auth session:", err);
-    }
-  };
-
+  // ─── Login ────────────────────────────────────────────────────────
   const login = async (
-    email: string,
+    emailOrUsername: string,
     password: string,
     remMe: boolean = true
   ): Promise<{ success: boolean; message?: string }> => {
     setIsLoading(true);
     try {
-      // Simulate validation / authentication delay
       await new Promise((resolve) => setTimeout(resolve, 600));
 
-      if (!email.trim() || !password.trim()) {
-        return { success: false, message: "Email dan kata sandi wajib diisi." };
+      const trimmedInput = emailOrUsername.trim().toLowerCase();
+      if (!trimmedInput || !password.trim()) {
+        return {
+          success: false,
+          message: "Email atau username dan kata sandi wajib diisi.",
+        };
       }
 
-      const activeUser: User = user
-        ? { ...user, email }
-        : {
-            ...DEFAULT_USER,
-            email,
-          };
+      // Look up registered users in SecureStore
+      const registeredUsers = await getRegisteredUsers();
+      const found = registeredUsers.find(
+        (u) =>
+          (u.email.toLowerCase() === trimmedInput ||
+            u.user.fullName.toLowerCase() === trimmedInput) &&
+          u.password === password
+      );
 
+      if (!found) {
+        return {
+          success: false,
+          message:
+            "Akun tidak ditemukan atau kata sandi salah. Silakan periksa kembali atau buat akun baru.",
+        };
+      }
+
+      const activeUser = found.user;
       setUser(activeUser);
       setIsAuthenticated(true);
       setRememberMe(remMe);
-      await saveAuthSession(activeUser, true, remMe);
+
+      // Save encrypted session token in SecureStore
+      await saveSession(activeUser, remMe);
+
       return { success: true };
     } finally {
       setIsLoading(false);
     }
   };
 
+  // ─── Register ─────────────────────────────────────────────────────
   const register = async (data: {
     fullName: string;
     email: string;
@@ -127,28 +171,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       await new Promise((resolve) => setTimeout(resolve, 700));
 
-      if (!data.fullName.trim() || !data.email.trim() || !data.password.trim()) {
+      if (
+        !data.fullName.trim() ||
+        !data.email.trim() ||
+        !data.password.trim()
+      ) {
         return {
           success: false,
           message: "Lengkapi semua data pendaftaran dengan benar.",
         };
       }
 
-      // Generate avatar initials from name
-      const initials = data.fullName
-        .split(" ")
-        .map((w) => w[0])
-        .slice(0, 2)
-        .join("")
-        .toUpperCase();
+      const registeredUsers = await getRegisteredUsers();
+      const existing = registeredUsers.find(
+        (u) => u.email.toLowerCase() === data.email.trim().toLowerCase()
+      );
+      if (existing) {
+        return {
+          success: false,
+          message:
+            "Email sudah terdaftar. Silakan gunakan email lain atau masuk dengan akun yang sudah ada.",
+        };
+      }
+
+      // Generate dynamic avatar initials from user's full name
+      const nameParts = data.fullName.trim().split(/\s+/);
+      const initials =
+        nameParts.length >= 2
+          ? (nameParts[0][0] + nameParts[1][0]).toUpperCase()
+          : (data.fullName.slice(0, 2) || "VF").toUpperCase();
 
       const newUser: User = {
         id: `usr_${Date.now()}`,
-        fullName: data.fullName,
-        email: data.email,
-        phone: data.phone || "+62 812-xxxx-xxxx",
+        fullName: data.fullName.trim(),
+        email: data.email.trim().toLowerCase(),
+        phone: data.phone?.trim() || "+62 812-xxxx-xxxx",
         role: "Warga Terverifikasi",
-        avatar: initials || "VF",
+        avatar: initials,
         biometricsEnabled: data.biometricsEnabled ?? true,
         smartNotifications: data.smartNotifications ?? true,
         sensor3DActive: true,
@@ -156,43 +215,96 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         securitySessionActive: true,
       };
 
+      // Persist to registered users in SecureStore
+      const updatedList: RegisteredUser[] = [
+        ...registeredUsers,
+        {
+          email: data.email.trim().toLowerCase(),
+          password: data.password,
+          user: newUser,
+        },
+      ];
+      await saveRegisteredUsers(updatedList);
+      setHasRegisteredUsers(true);
+
+      // Automatically authenticate and save session
       setUser(newUser);
       setIsAuthenticated(true);
-      await saveAuthSession(newUser, true, true);
+      setRememberMe(true);
+      await saveSession(newUser, true);
+
       return { success: true };
     } finally {
       setIsLoading(false);
     }
   };
 
+  // ─── Logout ───────────────────────────────────────────────────────
   const logout = async () => {
+    setUser(null);
     setIsAuthenticated(false);
-    await AsyncStorage.removeItem(AUTH_STORAGE_KEY);
+    setRememberMe(false);
+    // Explicitly delete session token from SecureStore
+    await deleteSecure(SECURE_KEYS.SESSION_TOKEN);
   };
 
+  // ─── Toggle Biometrics ────────────────────────────────────────────
   const toggleBiometrics = async (enabled: boolean) => {
     if (user) {
       const updated = { ...user, biometricsEnabled: enabled };
       setUser(updated);
-      await saveAuthSession(updated, isAuthenticated, rememberMe);
+      await updateRegisteredUser(updated);
+      await saveSession(updated, rememberMe);
     }
   };
 
-  const verifyBiometric = async (type: "fingerprint" | "face"): Promise<boolean> => {
-    // Simulate biometric hardware scanner verification
+  // ─── Verify Biometric ─────────────────────────────────────────────
+  const verifyBiometric = async (
+    type: "fingerprint" | "face"
+  ): Promise<boolean> => {
     await new Promise((resolve) => setTimeout(resolve, 900));
     if (user) {
-      setUser({ ...user, securitySessionActive: true });
+      const updated = { ...user, securitySessionActive: true };
+      setUser(updated);
+      await saveSession(updated, rememberMe);
+      return true;
     }
-    return true;
+
+    // If logging in via biometric shortcut
+    const registeredUsers = await getRegisteredUsers();
+    const bioUser =
+      registeredUsers.find((u) => u.user.biometricsEnabled) ||
+      registeredUsers[0];
+
+    if (bioUser) {
+      const activeUser = { ...bioUser.user, securitySessionActive: true };
+      setUser(activeUser);
+      setIsAuthenticated(true);
+      setRememberMe(true);
+      await saveSession(activeUser, true);
+      return true;
+    }
+
+    return false;
   };
 
+  // ─── Update Profile ───────────────────────────────────────────────
   const updateProfile = async (updated: Partial<User>) => {
     if (user) {
       const newUser = { ...user, ...updated };
       setUser(newUser);
-      await saveAuthSession(newUser, isAuthenticated, rememberMe);
+      await updateRegisteredUser(newUser);
+      await saveSession(newUser, rememberMe);
     }
+  };
+
+  // ─── Helper: update user data in registered users list ────────────
+  const updateRegisteredUser = async (updatedUser: User) => {
+    const registeredUsers = await getRegisteredUsers();
+    const updatedList = registeredUsers.map((ru) =>
+      ru.user.id === updatedUser.id ? { ...ru, user: updatedUser } : ru
+    );
+    await saveRegisteredUsers(updatedList);
   };
 
   return (
@@ -202,6 +314,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         isAuthenticated,
         isLoading,
         rememberMe,
+        hasRegisteredUsers,
         login,
         register,
         logout,
@@ -224,4 +337,3 @@ export const useAuth = () => {
 };
 
 export default AuthContext;
-

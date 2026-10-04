@@ -14,6 +14,7 @@ import {
     View,
 } from "react-native";
 import { BorderRadius, Colors, Spacing } from "../constants/theme";
+import { useAuth } from "../context/AuthContext";
 import { Profile } from "../types";
 
 interface ProfileModalProps {
@@ -34,6 +35,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   onAddProfile,
 }) => {
   const router = useRouter();
+  const { logout } = useAuth();
   const [isAdding, setIsAdding] = useState(false);
   const [newProfileName, setNewProfileName] = useState("");
 
@@ -192,6 +194,21 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                     </Text>
                   </Pressable>
                 </View>
+
+                {/* Logout Button */}
+                <Pressable
+                  style={[styles.authQuickBtn, { marginTop: 10, backgroundColor: "#FEF2F2", borderColor: "#FECACA" }]}
+                  onPress={async () => {
+                    onClose();
+                    await logout();
+                    router.replace("/auth/login" as any);
+                  }}
+                >
+                  <Ionicons name="log-out-outline" size={16} color="#DC2626" />
+                  <Text style={[styles.authQuickBtnText, { color: "#DC2626" }]}>
+                    Keluar (Logout)
+                  </Text>
+                </Pressable>
               </View>
             </TouchableWithoutFeedback>
           </KeyboardAvoidingView>

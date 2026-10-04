@@ -25,9 +25,9 @@ export const SignInScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const { login } = useAuth();
 
-  const [emailOrUsername, setEmailOrUsername] = useState("contoh@vorfine.com");
-  const [password, setPassword] = useState("••••••••••••");
-  const [rememberMe, setRememberMe] = useState(true);
+  const [emailOrUsername, setEmailOrUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -64,7 +64,7 @@ export const SignInScreen: React.FC = () => {
 
       {/* Top Header */}
       <View style={{ paddingTop: insets.top }}>
-        <AuthHeader stepTitle="Sign In" onBack={() => router.replace("/" as any)} />
+        <AuthHeader stepTitle="Sign In" onBack={() => router.replace("/auth/register" as any)} />
       </View>
 
       <KeyboardAvoidingView

@@ -33,7 +33,6 @@ export const HomeScreen: React.FC = () => {
   const router = useRouter();
   const { user } = useAuth();
   const {
-    schedules,
     toggleCompleteSchedule,
     formattedSelectedDate,
     currentTimeStr,
@@ -220,13 +219,13 @@ export const HomeScreen: React.FC = () => {
             <View style={styles.biometricQuickLeft}>
               <View style={styles.biometricAvatarCircle}>
                 <Text style={styles.biometricAvatarText}>
-                  {user?.avatar || "MF"}
+                  {user?.avatar || "VF"}
                 </Text>
               </View>
               <View style={styles.biometricQuickInfo}>
                 <View style={styles.biometricNameRow}>
                   <Text style={styles.biometricQuickName} numberOfLines={1}>
-                    {user?.fullName || "Muhammad Ivan Fadholli"}
+                    {user?.fullName || currentProfile.name || "Pengguna VORFÍNE"}
                   </Text>
                   <View style={styles.activeDotSmall} />
                 </View>
