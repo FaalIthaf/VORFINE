@@ -24,7 +24,6 @@ import {
 } from "../utils/scheduleUtils";
 
 import { loadData, saveData, STORAGE_KEYS } from "../utils/storage";
-import * as Notifications from "expo-notifications";
 import { useAuth } from "./AuthContext";
 export interface AppContextType {
   // Real-time Time & Synchronization
@@ -183,24 +182,6 @@ useEffect(() => {
   return () => clearInterval(timer);
 }, []);
 
-// 2. Expo Notifications Setup: request permissions and set handler
-useEffect(() => {
-  (async () => {
-    const { status } = await Notifications.requestPermissionsAsync();
-    if (status !== "granted") {
-      console.warn("Expo notifications permission not granted");
-    }
-    Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: false,
-        shouldShowBanner: true,
-        shouldShowList: true,
-      }),
-    });
-  })();
-}, []);
 
 // 3. Load persisted state from AsyncStorage on app start
 useEffect(() => {
