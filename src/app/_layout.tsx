@@ -30,12 +30,8 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     if (isLoading) return;
 
     if (!isAuthenticated && !isAuthGroup) {
-      // Unauthenticated user trying to access protected screens
-      if (hasRegisteredUsers) {
-        router.replace("/auth/login" as any);
-      } else {
-        router.replace("/auth/register" as any);
-      }
+      // Unauthenticated user → always go to Login page first
+      router.replace("/auth/login" as any);
     } else if (isAuthenticated && isLoginPageOrRegister) {
       // Authenticated user trying to access login/register
       router.replace("/" as any);
@@ -45,7 +41,6 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     isLoading,
     isAuthGroup,
     isLoginPageOrRegister,
-    hasRegisteredUsers,
   ]);
 
   // Prevent flash of protected dashboard content before auth check completes or redirect fires
@@ -59,7 +54,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
           backgroundColor: "#F8F9FA",
         }}
       >
-        <ActivityIndicator size="large" color="#208AEF" />
+        <ActivityIndicator size="large" color="#1F4D47" />
       </View>
     );
   }

@@ -40,6 +40,7 @@ export const HomeScreen: React.FC = () => {
     selectedProfileId,
     selectProfile,
     addProfile,
+    deleteProfile,
     currentProfile,
     financeData,
     transactions,
@@ -178,7 +179,7 @@ export const HomeScreen: React.FC = () => {
 
       {/* Header Section */}
       <Header
-        currentProfileName={user?.fullName || currentProfile.name}
+        currentProfileName={currentProfile.name}
         onPressProfile={() => setIsProfileModalVisible(true)}
         onPressNotification={handleNotificationPress}
         hasUnreadNotification={hasUnreadNotification}
@@ -190,7 +191,7 @@ export const HomeScreen: React.FC = () => {
           <InfoScreen
             showHeader={false}
             showBottomNav={false}
-            currentProfileName={user?.fullName || currentProfile.name}
+            currentProfileName={currentProfile.name}
             onPressProfile={() => setIsProfileModalVisible(true)}
             onPressNotification={handleNotificationPress}
             hasUnreadNotification={hasUnreadNotification}
@@ -211,36 +212,6 @@ export const HomeScreen: React.FC = () => {
             />
           }
         >
-          {/* Security & Biometrics Quick Access Card */}
-          <Pressable
-            style={styles.biometricQuickBar}
-            onPress={() => router.push("/auth/fingerprint" as any)}
-          >
-            <View style={styles.biometricQuickLeft}>
-              <View style={styles.biometricAvatarCircle}>
-                <Text style={styles.biometricAvatarText}>
-                  {user?.avatar || "VF"}
-                </Text>
-              </View>
-              <View style={styles.biometricQuickInfo}>
-                <View style={styles.biometricNameRow}>
-                  <Text style={styles.biometricQuickName} numberOfLines={1}>
-                    {user?.fullName || currentProfile.name || "Pengguna VORFÍNE"}
-                  </Text>
-                  <View style={styles.activeDotSmall} />
-                </View>
-                <Text style={styles.biometricQuickSubtitle}>
-                  Sensor 3D & Biometrik Aktif • AES-256
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.biometricQuickRight}>
-              <Ionicons name="finger-print-outline" size={19} color={Colors.primary} />
-              <Ionicons name="scan-outline" size={17} color={Colors.primary} />
-            </View>
-          </Pressable>
-
           {/* Card 1: Total Saldo */}
           <BalanceCard
             title="Total Saldo"
@@ -452,6 +423,10 @@ export const HomeScreen: React.FC = () => {
         onAddProfile={(name) => {
           addProfile(name);
           showFeedback(`Profil "${name}" berhasil dibuat!`);
+        }}
+        onDeleteProfile={(id) => {
+          deleteProfile(id);
+          showFeedback("Profil berhasil dihapus!");
         }}
       />
 

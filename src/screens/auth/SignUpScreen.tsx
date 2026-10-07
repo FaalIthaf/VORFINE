@@ -31,11 +31,11 @@ export const SignUpScreen: React.FC = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [agreeTerms, setAgreeTerms] = useState(false);
-  const [enableBiometrics, setEnableBiometrics] = useState(true);
+  const [enableNotifications, setEnableNotifications] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  // Simple password strength calculation
+  // Password strength calculation
   const getPasswordStrength = () => {
     if (!password) return { percent: 0, text: "Lemah", color: "#DC2626" };
     let score = 0;
@@ -50,9 +50,64 @@ export const SignUpScreen: React.FC = () => {
 
   const strength = getPasswordStrength();
 
+  // Phone number validation helper
+  const isValidPhoneNumber = (phoneInput: string): boolean => {
+    const cleaned = phoneInput.replace(/[\s\-()]/g, "");
+    if (cleaned.length === 0) return false;
+    const phoneRegex = /^(\+62|62|0)8[1-9][0-9]{7,10}$/;
+    return phoneRegex.test(cleaned);
+  };
+
+  // Email validation helper
+  const isValidEmail = (emailInput: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(emailInput.trim());
+  };
+
   const handleRegister = async () => {
-    if (!fullName.trim() || !email.trim() || !password.trim()) {
-      setErrorMsg("Mohon lengkapi semua kolom pendaftaran.");
+    // ── Strict field-by-field validation ──
+    if (!fullName.trim()) {
+      setErrorMsg("Nama lengkap wajib diisi.");
+      return;
+    }
+    if (fullName.trim().length < 3) {
+      setErrorMsg("Nama lengkap minimal 3 karakter.");
+      return;
+    }
+    if (!email.trim()) {
+      setErrorMsg("Email wajib diisi.");
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setErrorMsg("Format email tidak valid. Gunakan format: nama@domain.com");
+      return;
+    }
+    if (!phone.trim()) {
+      setErrorMsg("Nomor HP / WhatsApp wajib diisi.");
+      return;
+    }
+    if (!isValidPhoneNumber(phone)) {
+      setErrorMsg(
+        "Format nomor HP tidak valid. Gunakan format Indonesia: +62 812-xxxx-xxxx atau 08xx-xxxx-xxxx"
+      );
+      return;
+    }
+    if (!password.trim()) {
+      setErrorMsg("Kata sandi wajib diisi.");
+      return;
+    }
+    if (password.length < 8) {
+      setErrorMsg("Kata sandi minimal 8 karakter.");
+      return;
+    }
+    if (strength.percent < 50) {
+      setErrorMsg(
+        "Kata sandi terlalu lemah. Gunakan kombinasi huruf besar, angka, dan simbol."
+      );
+      return;
+    }
+    if (!confirmPassword.trim()) {
+      setErrorMsg("Konfirmasi kata sandi wajib diisi.");
       return;
     }
     if (password !== confirmPassword) {
@@ -72,19 +127,14 @@ export const SignUpScreen: React.FC = () => {
         email,
         phone,
         password,
-        biometricsEnabled: enableBiometrics,
-        smartNotifications: enableBiometrics,
+        smartNotifications: enableNotifications,
       });
 
       if (res.success) {
         Alert.alert(
           "Pendaftaran Berhasil",
-          "Akun Anda siap! Lanjutkan untuk mengatur PIN & Biometrik keamanan.",
+          "Akun VORFÍNE Anda berhasil dibuat! Anda akan diarahkan ke beranda.",
           [
-            {
-              text: "Atur Biometrik",
-              onPress: () => router.push("/auth/fingerprint" as any),
-            },
             {
               text: "Ke Beranda",
               onPress: () => router.replace("/" as any),
@@ -94,6 +144,8 @@ export const SignUpScreen: React.FC = () => {
       } else {
         setErrorMsg(res.message || "Gagal membuat akun.");
       }
+    } catch (err) {
+      setErrorMsg("Terjadi kesalahan. Silakan coba lagi.");
     } finally {
       setIsLoading(false);
     }
@@ -105,7 +157,10 @@ export const SignUpScreen: React.FC = () => {
 
       {/* Top Header */}
       <View style={{ paddingTop: insets.top }}>
-        <AuthHeader stepTitle="Sign Up" onBack={() => router.back()} />
+        <AuthHeader
+          stepTitle="Sign Up"
+          onBack={() => router.replace("/auth/login" as any)}
+        />
       </View>
 
       <KeyboardAvoidingView
@@ -145,7 +200,10 @@ export const SignUpScreen: React.FC = () => {
             <Input
               label="Nama Lengkap"
               value={fullName}
-              onChangeText={setFullName}
+              onChangeText={(text) => {
+                setFullName(text);
+                if (errorMsg) setErrorMsg("");
+              }}
               placeholder="Nama lengkap Anda"
               leftIcon={<Ionicons name="person-outline" size={18} color="#94A3B8" />}
             />
@@ -154,7 +212,10 @@ export const SignUpScreen: React.FC = () => {
             <Input
               label="Email Aktif"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(text) => {
+                setEmail(text);
+                if (errorMsg) setErrorMsg("");
+              }}
               placeholder="nama@domain.com"
               keyboardType="email-address"
               autoCapitalize="none"
@@ -165,7 +226,10 @@ export const SignUpScreen: React.FC = () => {
             <Input
               label="Nomor WhatsApp / HP"
               value={phone}
-              onChangeText={setPhone}
+              onChangeText={(text) => {
+                setPhone(text);
+                if (errorMsg) setErrorMsg("");
+              }}
               placeholder="+62 812-xxxx-xxxx"
               keyboardType="phone-pad"
               leftIcon={<Ionicons name="call-outline" size={18} color="#94A3B8" />}
@@ -175,52 +239,75 @@ export const SignUpScreen: React.FC = () => {
             <Input
               label="Buat Kata Sandi"
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(text) => {
+                setPassword(text);
+                if (errorMsg) setErrorMsg("");
+              }}
               placeholder="Minimal 8 karakter unik"
               isPassword
               leftIcon={<Ionicons name="lock-closed-outline" size={18} color="#94A3B8" />}
               rightBadge={
-                <View style={styles.strengthBadge}>
-                  <Ionicons name="shield-checkmark" size={12} color="#16A34A" />
-                  <Text style={styles.strengthBadgeText}>{strength.text}</Text>
-                </View>
+                password.length > 0 ? (
+                  <View
+                    style={[
+                      styles.strengthBadge,
+                      { backgroundColor: `${strength.color}20` },
+                    ]}
+                  >
+                    <Ionicons
+                      name="shield-checkmark"
+                      size={12}
+                      color={strength.color}
+                    />
+                    <Text style={[styles.strengthBadgeText, { color: strength.color }]}>
+                      {strength.text}
+                    </Text>
+                  </View>
+                ) : undefined
               }
             />
 
             {/* Password Strength Indicator Row */}
-            <View style={styles.strengthRow}>
-              <View style={styles.strengthBarBg}>
-                <View
-                  style={[
-                    styles.strengthBarFill,
-                    {
-                      width: `${strength.percent}%`,
-                      backgroundColor: strength.color,
-                    },
-                  ]}
-                />
+            {password.length > 0 && (
+              <View style={styles.strengthRow}>
+                <View style={styles.strengthBarBg}>
+                  <View
+                    style={[
+                      styles.strengthBarFill,
+                      {
+                        width: `${strength.percent}%`,
+                        backgroundColor: strength.color,
+                      },
+                    ]}
+                  />
+                </View>
+                <View style={styles.strengthTextRow}>
+                  <Text style={styles.strengthHintText}>
+                    Kombinasi huruf, angka & simbol aktif
+                  </Text>
+                  <Text style={styles.strengthPercentText}>
+                    Keamanan {strength.percent}%
+                  </Text>
+                </View>
               </View>
-              <View style={styles.strengthTextRow}>
-                <Text style={styles.strengthHintText}>
-                  Kombinasi huruf, angka & simbol aktif
-                </Text>
-                <Text style={styles.strengthPercentText}>
-                  Tingkat Keamanan {strength.percent}%
-                </Text>
-              </View>
-            </View>
+            )}
 
             {/* Konfirmasi Kata Sandi */}
             <Input
               label="Konfirmasi Kata Sandi"
               value={confirmPassword}
-              onChangeText={setConfirmPassword}
+              onChangeText={(text) => {
+                setConfirmPassword(text);
+                if (errorMsg) setErrorMsg("");
+              }}
               placeholder="Ulangi kata sandi Anda"
               isPassword
               leftIcon={<Ionicons name="repeat-outline" size={18} color="#94A3B8" />}
               rightIcon={
                 confirmPassword && confirmPassword === password ? (
                   <Ionicons name="checkmark-circle" size={20} color="#16A34A" />
+                ) : confirmPassword && confirmPassword !== password ? (
+                  <Ionicons name="close-circle" size={20} color="#DC2626" />
                 ) : undefined
               }
             />
@@ -236,21 +323,21 @@ export const SignUpScreen: React.FC = () => {
                     <Text style={styles.highlightText}>Syarat & Ketentuan</Text>{" "}
                     serta{" "}
                     <Text style={styles.highlightText}>Kebijakan Privasi</Text>{" "}
-                    VORFINE.
+                    VORFÍNE.
                   </Text>
                 }
               />
             </View>
 
-            {/* Checkbox 2: Biometrics */}
+            {/* Checkbox 2: Notifications */}
             <View style={styles.checkboxContainer}>
               <Checkbox
-                checked={enableBiometrics}
-                onToggle={setEnableBiometrics}
+                checked={enableNotifications}
+                onToggle={setEnableNotifications}
                 label={
                   <Text style={styles.checkboxLabel}>
-                    Aktifkan otentikasi biometrik & notifikasi cerdas untuk
-                    pengingat keuangan terjadwal.
+                    Aktifkan notifikasi cerdas untuk pengingat keuangan
+                    terjadwal.
                   </Text>
                 }
               />
@@ -269,8 +356,8 @@ export const SignUpScreen: React.FC = () => {
             {/* Already have account link */}
             <View style={styles.switchAuthRow}>
               <Text style={styles.switchAuthPrompt}>Sudah punya akun? </Text>
-              <Pressable onPress={() => router.push("/auth/login" as any)}>
-                <Text style={styles.switchAuthLink}>Masuk di sini {"->"}</Text>
+              <Pressable onPress={() => router.replace("/auth/login" as any)}>
+                <Text style={styles.switchAuthLink}>Masuk di sini {"→"}</Text>
               </Pressable>
             </View>
 
@@ -352,7 +439,6 @@ const styles = StyleSheet.create({
   strengthBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#DCFCE7",
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: BorderRadius.round,
@@ -361,7 +447,6 @@ const styles = StyleSheet.create({
   strengthBadgeText: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#16A34A",
   },
   strengthRow: {
     marginTop: -8,
@@ -435,4 +520,3 @@ const styles = StyleSheet.create({
 });
 
 export default SignUpScreen;
-

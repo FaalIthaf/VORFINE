@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AuthFooter } from "../../components/auth/AuthFooter";
-import { AuthHeader } from "../../components/auth/AuthHeader";
+import { ForgotPasswordModal } from "../../components/auth/ForgotPasswordModal";
 import { BrandLogo } from "../../components/BrandLogo";
 import { Button, Checkbox, Input } from "../../components/ui";
 import { BorderRadius, Colors, Spacing } from "../../constants/theme";
@@ -30,12 +30,23 @@ export const SignInScreen: React.FC = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [isForgotPasswordVisible, setIsForgotPasswordVisible] = useState(false);
 
   const handleLogin = async () => {
-    if (!emailOrUsername.trim() || !password.trim()) {
-      setErrorMsg("Email atau username dan kata sandi wajib diisi.");
+    // Strict validation
+    if (!emailOrUsername.trim()) {
+      setErrorMsg("Email atau username wajib diisi.");
       return;
     }
+    if (!password.trim()) {
+      setErrorMsg("Kata sandi wajib diisi.");
+      return;
+    }
+    if (password.trim().length < 6) {
+      setErrorMsg("Kata sandi minimal 6 karakter.");
+      return;
+    }
+
     setErrorMsg("");
     setIsLoading(true);
     try {
@@ -45,27 +56,23 @@ export const SignInScreen: React.FC = () => {
       } else {
         setErrorMsg(res.message || "Gagal masuk. Periksa kembali akun Anda.");
       }
+    } catch (err) {
+      setErrorMsg("Terjadi kesalahan. Silakan coba lagi.");
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleForgotPassword = () => {
-    Alert.alert(
-      "Lupa Kata Sandi",
-      "Tautan pemulihan kata sandi telah dikirimkan ke email terdaftar Anda.",
-      [{ text: "OK" }]
-    );
+    setIsForgotPasswordVisible(true);
   };
 
   return (
     <View style={styles.root}>
       <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
 
-      {/* Top Header */}
-      <View style={{ paddingTop: insets.top }}>
-        <AuthHeader stepTitle="Sign In" onBack={() => router.replace("/auth/register" as any)} />
-      </View>
+      {/* Top Safe Area Inset — Header removed for clean, focused login UI */}
+      <View style={{ height: insets.top }} />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -147,41 +154,9 @@ export const SignInScreen: React.FC = () => {
               style={styles.submitBtn}
             />
 
-            {/* Instant Divider */}
-            <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>ATAU MASUK DENGAN INSTAN</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            {/* Quick Biometrics Option Cards */}
-            <View style={styles.biometricsRow}>
-              <Pressable
-                style={styles.biometricCard}
-                onPress={() => router.push("/auth/fingerprint" as any)}
-              >
-                <View style={styles.biometricIconCircle}>
-                  <Ionicons name="finger-print-outline" size={24} color={Colors.primary} />
-                </View>
-                <Text style={styles.biometricTitle}>Fingerprint</Text>
-                <Text style={styles.biometricSubtitle}>Sentuh Sensor</Text>
-              </Pressable>
-
-              <Pressable
-                style={styles.biometricCard}
-                onPress={() => router.push("/auth/face-id" as any)}
-              >
-                <View style={styles.biometricIconCircle}>
-                  <Ionicons name="scan-outline" size={24} color={Colors.primary} />
-                </View>
-                <Text style={styles.biometricTitle}>Face ID</Text>
-                <Text style={styles.biometricSubtitle}>Pindai Wajah</Text>
-              </Pressable>
-            </View>
-
             {/* Register Link */}
             <View style={styles.switchAuthRow}>
-              <Text style={styles.switchAuthPrompt}>Belum memiliki akun VORFINE? </Text>
+              <Text style={styles.switchAuthPrompt}>Belum memiliki akun VORFÍNE? </Text>
               <Pressable onPress={() => router.push("/auth/register" as any)}>
                 <Text style={styles.switchAuthLink}>Daftar Akun Baru</Text>
               </Pressable>
@@ -200,6 +175,19 @@ export const SignInScreen: React.FC = () => {
           <AuthFooter />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Forgot Password 3-Step Wizard Modal */}
+      <ForgotPasswordModal
+        visible={isForgotPasswordVisible}
+        onClose={() => setIsForgotPasswordVisible(false)}
+        onSuccess={(email) => {
+          setEmailOrUsername(email);
+          Alert.alert(
+            "Berhasil",
+            "Kata sandi berhasil diperbarui. Silakan masuk menggunakan kata sandi baru Anda."
+          );
+        }}
+      />
     </View>
   );
 };
@@ -220,7 +208,7 @@ const styles = StyleSheet.create({
   },
   brandTitleBlock: {
     alignItems: "center",
-    marginTop: 10,
+    marginTop: 18,
     marginBottom: 24,
   },
   headingTitle: {
@@ -272,57 +260,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     marginBottom: 22,
   },
-  dividerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#E2E8F0",
-  },
-  dividerText: {
-    marginHorizontal: 10,
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#94A3B8",
-    letterSpacing: 0.5,
-  },
-  biometricsRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 22,
-  },
-  biometricCard: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-    borderWidth: 1.2,
-    borderColor: "#E2E8F0",
-    borderRadius: BorderRadius.xl,
-    paddingVertical: 14,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  biometricIconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#E0F2F1",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
-  },
-  biometricTitle: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#1E293B",
-  },
-  biometricSubtitle: {
-    fontSize: 11,
-    color: "#64748B",
-    marginTop: 2,
-  },
   switchAuthRow: {
     flexDirection: "row",
     justifyContent: "center",
@@ -361,4 +298,3 @@ const styles = StyleSheet.create({
 });
 
 export default SignInScreen;
-

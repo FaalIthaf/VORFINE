@@ -73,6 +73,7 @@ export interface AppContextType {
   selectedProfileId: string;
   selectProfile: (id: string) => void;
   addProfile: (name: string) => void;
+  deleteProfile: (id: string) => void;
   currentProfile: Profile;
 
   // Finance
@@ -540,10 +541,14 @@ useEffect(() => {
         profileId: selectedProfileId,
       };
 
-      setTransactionsByProfile((prev) => ({
-        ...prev,
-        [selectedProfileId]: [newItem, ...(prev[selectedProfileId] || [])],
-      }));
+      setTransactionsByProfile((prev) => {
+        const updated = {
+          ...prev,
+          [selectedProfileId]: [newItem, ...(prev[selectedProfileId] || [])],
+        };
+        saveData(STORAGE_KEYS.TRANSACTIONS, updated);
+        return updated;
+      });
 
       // Check budget alert if it was an expense
       if (item.type === "expense") {
@@ -561,12 +566,16 @@ useEffect(() => {
 
   const deleteTransaction = useCallback(
     (id: string) => {
-      setTransactionsByProfile((prev) => ({
-        ...prev,
-        [selectedProfileId]: (prev[selectedProfileId] || []).filter(
-          (item) => item.id !== id,
-        ),
-      }));
+      setTransactionsByProfile((prev) => {
+        const updated = {
+          ...prev,
+          [selectedProfileId]: (prev[selectedProfileId] || []).filter(
+            (item) => item.id !== id,
+          ),
+        };
+        saveData(STORAGE_KEYS.TRANSACTIONS, updated);
+        return updated;
+      });
     },
     [selectedProfileId],
   );
@@ -585,10 +594,12 @@ useEffect(() => {
 
       setSchedulesByProfile((prev) => {
         const list = [...(prev[selectedProfileId] || []), newItem];
-        return {
+        const updated = {
           ...prev,
           [selectedProfileId]: list.sort(sortSchedulesChronologically),
         };
+        saveData(STORAGE_KEYS.SCHEDULES, updated);
+        return updated;
       });
 
       // 3. Exact One-Shot Timer if Schedule starts today in the future
@@ -634,10 +645,12 @@ useEffect(() => {
         const list = (prev[selectedProfileId] || []).map((item) =>
           item.id === id ? { ...item, ...updatedFields } : item,
         );
-        return {
+        const updated = {
           ...prev,
           [selectedProfileId]: list.sort(sortSchedulesChronologically),
         };
+        saveData(STORAGE_KEYS.SCHEDULES, updated);
+        return updated;
       });
     },
     [selectedProfileId],
@@ -645,24 +658,32 @@ useEffect(() => {
 
   const deleteSchedule = useCallback(
     (id: string) => {
-      setSchedulesByProfile((prev) => ({
-        ...prev,
-        [selectedProfileId]: (prev[selectedProfileId] || []).filter(
-          (item) => item.id !== id,
-        ),
-      }));
+      setSchedulesByProfile((prev) => {
+        const updated = {
+          ...prev,
+          [selectedProfileId]: (prev[selectedProfileId] || []).filter(
+            (item) => item.id !== id,
+          ),
+        };
+        saveData(STORAGE_KEYS.SCHEDULES, updated);
+        return updated;
+      });
     },
     [selectedProfileId],
   );
 
   const toggleCompleteSchedule = useCallback(
     (id: string) => {
-      setSchedulesByProfile((prev) => ({
-        ...prev,
-        [selectedProfileId]: (prev[selectedProfileId] || []).map((item) =>
-          item.id === id ? { ...item, completed: !item.completed } : item,
-        ),
-      }));
+      setSchedulesByProfile((prev) => {
+        const updated = {
+          ...prev,
+          [selectedProfileId]: (prev[selectedProfileId] || []).map((item) =>
+            item.id === id ? { ...item, completed: !item.completed } : item,
+          ),
+        };
+        saveData(STORAGE_KEYS.SCHEDULES, updated);
+        return updated;
+      });
     },
     [selectedProfileId],
   );
@@ -745,8 +766,10 @@ useEffect(() => {
   // 9. Profile Actions with Complete State Isolation and Reset
   const selectProfile = (id: string) => {
     setSelectedProfileId(id);
-    setProfiles((prev) => prev.map((p) => ({ ...p, isCurrent: p.id === id })));
-    // State is cleanly switched through selectedProfileId indexing financeByProfile, transactionsByProfile, etc.
+    const updated = profiles.map((p) => ({ ...p, isCurrent: p.id === id }));
+    setProfiles(updated);
+    saveData(STORAGE_KEYS.SELECTED_PROFILE, id);
+    saveData(STORAGE_KEYS.PROFILES, updated);
   };
 
   const addProfile = (name: string) => {
@@ -758,28 +781,83 @@ useEffect(() => {
     };
 
     // Initialize clean isolated state for the new profile
-    setFinanceByProfile((prev) => ({
-      ...prev,
+    const newFinance = {
+      ...financeByProfile,
       [newId]: createDefaultFinanceData("September"),
-    }));
-    setTransactionsByProfile((prev) => ({
-      ...prev,
+    };
+    const newTx = {
+      ...transactionsByProfile,
       [newId]: [],
-    }));
-    setSchedulesByProfile((prev) => ({
-      ...prev,
+    };
+    const newSched = {
+      ...schedulesByProfile,
       [newId]: [],
-    }));
-    setNotificationsByProfile((prev) => ({
-      ...prev,
+    };
+    const newNotif = {
+      ...notificationsByProfile,
       [newId]: [],
-    }));
+    };
 
-    setProfiles((prev) => [
-      ...prev.map((p) => ({ ...p, isCurrent: false })),
+    setFinanceByProfile(newFinance);
+    setTransactionsByProfile(newTx);
+    setSchedulesByProfile(newSched);
+    setNotificationsByProfile(newNotif);
+
+    const updatedProfiles = [
+      ...profiles.map((p) => ({ ...p, isCurrent: false })),
       newProfile,
-    ]);
+    ];
+
+    setProfiles(updatedProfiles);
     setSelectedProfileId(newId);
+
+    saveData(STORAGE_KEYS.PROFILES, updatedProfiles);
+    saveData(STORAGE_KEYS.SELECTED_PROFILE, newId);
+    saveData(STORAGE_KEYS.FINANCE, newFinance);
+    saveData(STORAGE_KEYS.TRANSACTIONS, newTx);
+    saveData(STORAGE_KEYS.SCHEDULES, newSched);
+    saveData(STORAGE_KEYS.NOTIFICATIONS, newNotif);
+  };
+
+  const deleteProfile = (id: string) => {
+    // If only 1 profile or attempting to delete when length <= 1, prevent
+    if (profiles.length <= 1) return;
+
+    const remaining = profiles.filter((p) => p.id !== id);
+    const newActiveId = selectedProfileId === id ? remaining[0].id : selectedProfileId;
+    const updatedProfiles = remaining.map((p) => ({ ...p, isCurrent: p.id === newActiveId }));
+
+    setProfiles(updatedProfiles);
+    setSelectedProfileId(newActiveId);
+
+    // Clean up associated data
+    setFinanceByProfile((prev) => {
+      const copy = { ...prev };
+      delete copy[id];
+      saveData(STORAGE_KEYS.FINANCE, copy);
+      return copy;
+    });
+    setTransactionsByProfile((prev) => {
+      const copy = { ...prev };
+      delete copy[id];
+      saveData(STORAGE_KEYS.TRANSACTIONS, copy);
+      return copy;
+    });
+    setSchedulesByProfile((prev) => {
+      const copy = { ...prev };
+      delete copy[id];
+      saveData(STORAGE_KEYS.SCHEDULES, copy);
+      return copy;
+    });
+    setNotificationsByProfile((prev) => {
+      const copy = { ...prev };
+      delete copy[id];
+      saveData(STORAGE_KEYS.NOTIFICATIONS, copy);
+      return copy;
+    });
+
+    saveData(STORAGE_KEYS.PROFILES, updatedProfiles);
+    saveData(STORAGE_KEYS.SELECTED_PROFILE, newActiveId);
   };
 
   const updateFinanceData = useCallback(
@@ -797,10 +875,12 @@ useEffect(() => {
           selectedProfileId,
         );
 
-        return {
+        const newMap = {
           ...prev,
           [selectedProfileId]: updated,
         };
+        saveData(STORAGE_KEYS.FINANCE, newMap);
+        return newMap;
       });
     },
     [selectedProfileId, checkBudgetThresholds],
@@ -834,6 +914,7 @@ useEffect(() => {
         selectedProfileId,
         selectProfile,
         addProfile,
+        deleteProfile,
         currentProfile,
         financeData: activeFinanceData,
         updateFinanceData,

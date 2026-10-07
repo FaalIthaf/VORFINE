@@ -29,13 +29,18 @@ export interface AuthContextType {
     email: string;
     phone: string;
     password: string;
-    biometricsEnabled?: boolean;
     smartNotifications?: boolean;
   }) => Promise<{ success: boolean; message?: string }>;
   logout: () => Promise<void>;
-  toggleBiometrics: (enabled: boolean) => Promise<void>;
-  verifyBiometric: (type: "fingerprint" | "face") => Promise<boolean>;
   updateProfile: (updated: Partial<User>) => Promise<void>;
+  verifyBiometric: (type: "face" | "fingerprint") => Promise<boolean>;
+  toggleBiometrics: (enabled?: boolean) => Promise<void>;
+  /** Instant switch — no re-login required */
+  switchAccount: (email: string) => Promise<{ success: boolean; message?: string }>;
+  /** Forgot-password: look up account by email/username */
+  findAccount: (emailOrUsername: string) => Promise<RegisteredUser | null>;
+  /** Forgot-password: reset password for a given email */
+  resetPassword: (email: string, newPassword: string) => Promise<{ success: boolean; message?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -76,14 +81,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   };
 
-  // ─── Load saved session and registered users on mount ────────────
+  // ─── Load saved session on mount ──────────────────────────────────
   useEffect(() => {
     (async () => {
       try {
         const registeredUsers = await getRegisteredUsers();
         setHasRegisteredUsers(registeredUsers.length > 0);
 
-        // Check if an encrypted session exists in SecureStore
         const sessionData = await loadSecureJSON<{
           user: User;
           rememberMe: boolean;
@@ -95,7 +99,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           setIsAuthenticated(true);
           setRememberMe(sessionData.rememberMe ?? true);
         } else {
-          // No valid session — user must authenticate
           setUser(null);
           setIsAuthenticated(false);
         }
@@ -115,7 +118,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     password: string,
     remMe: boolean = true
   ): Promise<{ success: boolean; message?: string }> => {
-    setIsLoading(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 600));
 
@@ -127,7 +129,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         };
       }
 
-      // Look up registered users in SecureStore
       const registeredUsers = await getRegisteredUsers();
       const found = registeredUsers.find(
         (u) =>
@@ -148,13 +149,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setUser(activeUser);
       setIsAuthenticated(true);
       setRememberMe(remMe);
-
-      // Save encrypted session token in SecureStore
       await saveSession(activeUser, remMe);
 
       return { success: true };
-    } finally {
-      setIsLoading(false);
+    } catch (err) {
+      console.warn("Login error:", err);
+      return { success: false, message: "Terjadi kesalahan saat login." };
     }
   };
 
@@ -164,10 +164,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     email: string;
     phone: string;
     password: string;
-    biometricsEnabled?: boolean;
     smartNotifications?: boolean;
   }): Promise<{ success: boolean; message?: string }> => {
-    setIsLoading(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 700));
 
@@ -179,6 +177,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         return {
           success: false,
           message: "Lengkapi semua data pendaftaran dengan benar.",
+        };
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(data.email.trim())) {
+        return {
+          success: false,
+          message: "Format email tidak valid. Gunakan format: nama@domain.com",
+        };
+      }
+
+      const phoneClean = data.phone.replace(/[\s\-()]/g, "");
+      if (phoneClean.length > 0) {
+        const phoneRegex = /^(\+62|62|0)8[1-9][0-9]{7,10}$/;
+        if (!phoneRegex.test(phoneClean)) {
+          return {
+            success: false,
+            message:
+              "Format nomor HP tidak valid. Gunakan format Indonesia: +62 8xx-xxxx-xxxx",
+          };
+        }
+      }
+
+      if (data.password.length < 8) {
+        return {
+          success: false,
+          message: "Kata sandi minimal harus 8 karakter.",
         };
       }
 
@@ -194,7 +219,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         };
       }
 
-      // Generate dynamic avatar initials from user's full name
       const nameParts = data.fullName.trim().split(/\s+/);
       const initials =
         nameParts.length >= 2
@@ -208,14 +232,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         phone: data.phone?.trim() || "+62 812-xxxx-xxxx",
         role: "Warga Terverifikasi",
         avatar: initials,
-        biometricsEnabled: data.biometricsEnabled ?? true,
+        biometricsEnabled: false,
         smartNotifications: data.smartNotifications ?? true,
-        sensor3DActive: true,
+        sensor3DActive: false,
         encryptionStandard: "AES-256",
         securitySessionActive: true,
       };
 
-      // Persist to registered users in SecureStore
       const updatedList: RegisteredUser[] = [
         ...registeredUsers,
         {
@@ -227,15 +250,84 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       await saveRegisteredUsers(updatedList);
       setHasRegisteredUsers(true);
 
-      // Automatically authenticate and save session
       setUser(newUser);
       setIsAuthenticated(true);
       setRememberMe(true);
       await saveSession(newUser, true);
 
       return { success: true };
-    } finally {
-      setIsLoading(false);
+    } catch (err) {
+      console.warn("Register error:", err);
+      return { success: false, message: "Terjadi kesalahan saat mendaftar." };
+    }
+  };
+
+  // ─── Instant Account Switch (NO re-login!) ────────────────────────
+  const switchAccount = async (
+    email: string
+  ): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const registeredUsers = await getRegisteredUsers();
+      const target = registeredUsers.find(
+        (u) => u.email.toLowerCase() === email.toLowerCase()
+      );
+
+      if (!target) {
+        return { success: false, message: "Akun tidak ditemukan." };
+      }
+
+      const activeUser = target.user;
+      setUser(activeUser);
+      setIsAuthenticated(true);
+      setRememberMe(true);
+      await saveSession(activeUser, true);
+
+      return { success: true };
+    } catch (err) {
+      console.warn("Switch account error:", err);
+      return { success: false, message: "Gagal mengganti akun." };
+    }
+  };
+
+  // ─── Find Account (for Forgot Password step 1) ────────────────────
+  const findAccount = async (
+    emailOrUsername: string
+  ): Promise<RegisteredUser | null> => {
+    try {
+      const trimmed = emailOrUsername.trim().toLowerCase();
+      const registeredUsers = await getRegisteredUsers();
+      const found = registeredUsers.find(
+        (u) =>
+          u.email.toLowerCase() === trimmed ||
+          u.user.fullName.toLowerCase() === trimmed
+      );
+      return found || null;
+    } catch {
+      return null;
+    }
+  };
+
+  // ─── Reset Password (for Forgot Password step 3) ──────────────────
+  const resetPassword = async (
+    email: string,
+    newPassword: string
+  ): Promise<{ success: boolean; message?: string }> => {
+    try {
+      if (newPassword.length < 8) {
+        return { success: false, message: "Kata sandi minimal 8 karakter." };
+      }
+      const registeredUsers = await getRegisteredUsers();
+      const idx = registeredUsers.findIndex(
+        (u) => u.email.toLowerCase() === email.toLowerCase()
+      );
+      if (idx === -1) {
+        return { success: false, message: "Akun tidak ditemukan." };
+      }
+      registeredUsers[idx] = { ...registeredUsers[idx], password: newPassword };
+      await saveRegisteredUsers(registeredUsers);
+      return { success: true };
+    } catch {
+      return { success: false, message: "Gagal mengatur ulang kata sandi." };
     }
   };
 
@@ -244,48 +336,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setUser(null);
     setIsAuthenticated(false);
     setRememberMe(false);
-    // Explicitly delete session token from SecureStore
-    await deleteSecure(SECURE_KEYS.SESSION_TOKEN);
-  };
-
-  // ─── Toggle Biometrics ────────────────────────────────────────────
-  const toggleBiometrics = async (enabled: boolean) => {
-    if (user) {
-      const updated = { ...user, biometricsEnabled: enabled };
-      setUser(updated);
-      await updateRegisteredUser(updated);
-      await saveSession(updated, rememberMe);
+    try {
+      await deleteSecure(SECURE_KEYS.SESSION_TOKEN);
+    } catch (err) {
+      console.warn("Failed to delete session on logout:", err);
     }
-  };
-
-  // ─── Verify Biometric ─────────────────────────────────────────────
-  const verifyBiometric = async (
-    type: "fingerprint" | "face"
-  ): Promise<boolean> => {
-    await new Promise((resolve) => setTimeout(resolve, 900));
-    if (user) {
-      const updated = { ...user, securitySessionActive: true };
-      setUser(updated);
-      await saveSession(updated, rememberMe);
-      return true;
-    }
-
-    // If logging in via biometric shortcut
-    const registeredUsers = await getRegisteredUsers();
-    const bioUser =
-      registeredUsers.find((u) => u.user.biometricsEnabled) ||
-      registeredUsers[0];
-
-    if (bioUser) {
-      const activeUser = { ...bioUser.user, securitySessionActive: true };
-      setUser(activeUser);
-      setIsAuthenticated(true);
-      setRememberMe(true);
-      await saveSession(activeUser, true);
-      return true;
-    }
-
-    return false;
   };
 
   // ─── Update Profile ───────────────────────────────────────────────
@@ -298,7 +353,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  // ─── Helper: update user data in registered users list ────────────
+  // ─── Biometrics ───────────────────────────────────────────────────
+  const verifyBiometric = async (_type: "face" | "fingerprint"): Promise<boolean> => {
+    if (user) {
+      setIsAuthenticated(true);
+      await saveSession(user, true);
+    }
+    return true;
+  };
+
+  const toggleBiometrics = async (enabled?: boolean) => {
+    if (user) {
+      const nextVal = enabled !== undefined ? enabled : !user.biometricsEnabled;
+      await updateProfile({ biometricsEnabled: nextVal });
+    }
+  };
+
   const updateRegisteredUser = async (updatedUser: User) => {
     const registeredUsers = await getRegisteredUsers();
     const updatedList = registeredUsers.map((ru) =>
@@ -318,9 +388,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         login,
         register,
         logout,
-        toggleBiometrics,
-        verifyBiometric,
         updateProfile,
+        verifyBiometric,
+        toggleBiometrics,
+        switchAccount,
+        findAccount,
+        resetPassword,
       }}
     >
       {children}

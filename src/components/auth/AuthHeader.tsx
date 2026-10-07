@@ -9,12 +9,14 @@ export interface AuthHeaderProps {
   stepTitle?: string;
   onBack?: () => void;
   showAvatar?: boolean;
+  showBackButton?: boolean;
 }
 
 export const AuthHeader: React.FC<AuthHeaderProps> = ({
   stepTitle = "Sign In",
   onBack,
   showAvatar = true,
+  showBackButton = true,
 }) => {
   const router = useRouter();
 
@@ -31,9 +33,13 @@ export const AuthHeader: React.FC<AuthHeaderProps> = ({
   return (
     <View style={styles.container}>
       {/* Back button */}
-      <Pressable onPress={handleBack} hitSlop={10} style={styles.backButton}>
-        <Ionicons name="arrow-back" size={22} color="#1E293B" />
-      </Pressable>
+      {showBackButton ? (
+        <Pressable onPress={handleBack} hitSlop={10} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={22} color="#1E293B" />
+        </Pressable>
+      ) : (
+        <View style={styles.backButton} />
+      )}
 
       {/* Brand Center */}
       <View style={styles.brandWrapper}>
