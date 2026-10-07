@@ -14,7 +14,6 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AuthFooter } from "../../components/auth/AuthFooter";
-import { AuthHeader } from "../../components/auth/AuthHeader";
 import { BrandLogo } from "../../components/BrandLogo";
 import { Badge, Button, Checkbox, Input } from "../../components/ui";
 import { BorderRadius, Colors, Spacing } from "../../constants/theme";
@@ -88,7 +87,7 @@ export const SignUpScreen: React.FC = () => {
     }
     if (!isValidPhoneNumber(phone)) {
       setErrorMsg(
-        "Format nomor HP tidak valid. Gunakan format Indonesia: +62 812-xxxx-xxxx atau 08xx-xxxx-xxxx"
+        "Format nomor HP tidak valid. Gunakan format Indonesia: +62 812-xxxx-xxxx atau 08xx-xxxx-xxxx",
       );
       return;
     }
@@ -102,7 +101,7 @@ export const SignUpScreen: React.FC = () => {
     }
     if (strength.percent < 50) {
       setErrorMsg(
-        "Kata sandi terlalu lemah. Gunakan kombinasi huruf besar, angka, dan simbol."
+        "Kata sandi terlalu lemah. Gunakan kombinasi huruf besar, angka, dan simbol.",
       );
       return;
     }
@@ -139,7 +138,7 @@ export const SignUpScreen: React.FC = () => {
               text: "Ke Beranda",
               onPress: () => router.replace("/" as any),
             },
-          ]
+          ],
         );
       } else {
         setErrorMsg(res.message || "Gagal membuat akun.");
@@ -154,14 +153,6 @@ export const SignUpScreen: React.FC = () => {
   return (
     <View style={styles.root}>
       <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
-
-      {/* Top Header */}
-      <View style={{ paddingTop: insets.top }}>
-        <AuthHeader
-          stepTitle="Sign Up"
-          onBack={() => router.replace("/auth/login" as any)}
-        />
-      </View>
 
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -205,7 +196,9 @@ export const SignUpScreen: React.FC = () => {
                 if (errorMsg) setErrorMsg("");
               }}
               placeholder="Nama lengkap Anda"
-              leftIcon={<Ionicons name="person-outline" size={18} color="#94A3B8" />}
+              leftIcon={
+                <Ionicons name="person-outline" size={18} color="#94A3B8" />
+              }
             />
 
             {/* Email Aktif */}
@@ -219,7 +212,9 @@ export const SignUpScreen: React.FC = () => {
               placeholder="nama@domain.com"
               keyboardType="email-address"
               autoCapitalize="none"
-              leftIcon={<Ionicons name="mail-outline" size={18} color="#94A3B8" />}
+              leftIcon={
+                <Ionicons name="mail-outline" size={18} color="#94A3B8" />
+              }
             />
 
             {/* Nomor WhatsApp / HP */}
@@ -232,7 +227,9 @@ export const SignUpScreen: React.FC = () => {
               }}
               placeholder="+62 812-xxxx-xxxx"
               keyboardType="phone-pad"
-              leftIcon={<Ionicons name="call-outline" size={18} color="#94A3B8" />}
+              leftIcon={
+                <Ionicons name="call-outline" size={18} color="#94A3B8" />
+              }
             />
 
             {/* Buat Kata Sandi */}
@@ -245,7 +242,13 @@ export const SignUpScreen: React.FC = () => {
               }}
               placeholder="Minimal 8 karakter unik"
               isPassword
-              leftIcon={<Ionicons name="lock-closed-outline" size={18} color="#94A3B8" />}
+              leftIcon={
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={18}
+                  color="#94A3B8"
+                />
+              }
               rightBadge={
                 password.length > 0 ? (
                   <View
@@ -259,7 +262,12 @@ export const SignUpScreen: React.FC = () => {
                       size={12}
                       color={strength.color}
                     />
-                    <Text style={[styles.strengthBadgeText, { color: strength.color }]}>
+                    <Text
+                      style={[
+                        styles.strengthBadgeText,
+                        { color: strength.color },
+                      ]}
+                    >
                       {strength.text}
                     </Text>
                   </View>
@@ -302,7 +310,9 @@ export const SignUpScreen: React.FC = () => {
               }}
               placeholder="Ulangi kata sandi Anda"
               isPassword
-              leftIcon={<Ionicons name="repeat-outline" size={18} color="#94A3B8" />}
+              leftIcon={
+                <Ionicons name="repeat-outline" size={18} color="#94A3B8" />
+              }
               rightIcon={
                 confirmPassword && confirmPassword === password ? (
                   <Ionicons name="checkmark-circle" size={20} color="#16A34A" />
@@ -349,7 +359,13 @@ export const SignUpScreen: React.FC = () => {
               onPress={handleRegister}
               loading={isLoading}
               size="lg"
-              leftIcon={<Ionicons name="person-add-outline" size={18} color={Colors.white} />}
+              leftIcon={
+                <Ionicons
+                  name="person-add-outline"
+                  size={18}
+                  color={Colors.white}
+                />
+              }
               style={styles.submitBtn}
             />
 
