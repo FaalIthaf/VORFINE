@@ -3,8 +3,8 @@ import { StatusBar } from "expo-status-bar";
 import React, { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { AppProvider } from "../context/AppContext";
-import { AuthProvider, useAuth } from "../context/AuthContext";
+import { AppProvider } from "@/context/AppContext";
+import { AuthProvider, useAuth } from "@/features/auth";
 
 /**
  * Auth Guard component:

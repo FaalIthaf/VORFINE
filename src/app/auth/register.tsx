@@ -1,4 +1,4 @@
-import SignUpScreen from "../../screens/auth/SignUpScreen";
+import { SignUpScreen } from "@/features/auth";
 
 export default function RegisterRoute() {
   return <SignUpScreen />;

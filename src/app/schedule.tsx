@@ -1,4 +1,4 @@
-import ScheduleScreen from "../screens/ScheduleScreen";
+import { ScheduleScreen } from "@/features/schedule";
 
 export default function ScheduleRoute() {
   return <ScheduleScreen />;

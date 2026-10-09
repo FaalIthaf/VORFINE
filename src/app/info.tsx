@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import InfoScreen from "../screens/InfoScreen";
+import { InfoScreen } from "@/features/dashboard";
 
 export default function InfoRoute() {
   const router = useRouter();

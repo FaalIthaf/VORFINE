@@ -1,4 +1,4 @@
-import ExpenseDetailScreen from "../screens/ExpenseDetailScreen";
+import { ExpenseDetailScreen } from "@/features/transaction";
 
 export default function PengeluaranRoute() {
   return <ExpenseDetailScreen />;

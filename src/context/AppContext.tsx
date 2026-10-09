@@ -24,7 +24,7 @@ import {
 } from "../utils/scheduleUtils";
 
 import { loadData, saveData, STORAGE_KEYS } from "../utils/storage";
-import { useAuth } from "./AuthContext";
+import { useAuth } from "@/features/auth";
 export interface AppContextType {
   // Real-time Time & Synchronization
   currentTime: Date;

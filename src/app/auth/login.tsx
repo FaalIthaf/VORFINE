@@ -1,4 +1,4 @@
-import SignInScreen from "../../screens/auth/SignInScreen";
+import { SignInScreen } from "@/features/auth";
 
 export default function LoginRoute() {
   return <SignInScreen />;

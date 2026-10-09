@@ -11,9 +11,9 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-import { BorderRadius, Colors, Spacing } from "../../constants/theme";
-import { RegisteredUser, useAuth } from "../../context/AuthContext";
-import { Button, Input } from "../ui";
+import { BorderRadius, Colors, Spacing } from "@/constants/theme";
+import { RegisteredUser, useAuth } from "../context/AuthContext";
+import { Button, Input } from "@/components/ui";
 
 interface ForgotPasswordModalProps {
   visible: boolean;

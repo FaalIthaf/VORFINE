@@ -1,4 +1,4 @@
-import IncomeDetailScreen from "../screens/IncomeDetailScreen";
+import { IncomeDetailScreen } from "@/features/transaction";
 
 export default function IncomeRoute() {
   return <IncomeDetailScreen />;

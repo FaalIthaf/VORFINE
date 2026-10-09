@@ -2,8 +2,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { BrandLogo } from "../BrandLogo";
-import { Colors } from "../../constants/theme";
+import { BrandLogo } from "@/components/BrandLogo";
+import { Colors } from "@/constants/theme";
 
 export interface AuthHeaderProps {
   stepTitle?: string;
