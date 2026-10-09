@@ -157,6 +157,8 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
     }
   };
 
+  if (!visible) return null;
+
   return (
     <Modal
       visible={visible}

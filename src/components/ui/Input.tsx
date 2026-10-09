@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState } from "react";
+import React, { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import {
   Pressable,
   StyleProp,
@@ -25,84 +25,108 @@ export interface InputProps extends TextInputProps {
   rightBadge?: React.ReactNode;
 }
 
-export const Input: React.FC<InputProps> = ({
-  label,
-  error,
-  helperText,
-  leftIcon,
-  rightIcon,
-  isPassword = false,
-  containerStyle,
-  inputStyle,
-  rightBadge,
-  secureTextEntry,
-  onFocus,
-  onBlur,
-  ...props
-}) => {
-  const [isFocused, setIsFocused] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+export const Input = forwardRef<TextInput, InputProps>(
+  (
+    {
+      label,
+      error,
+      helperText,
+      leftIcon,
+      rightIcon,
+      isPassword = false,
+      containerStyle,
+      inputStyle,
+      rightBadge,
+      secureTextEntry,
+      onFocus,
+      onBlur,
+      ...props
+    },
+    ref
+  ) => {
+    const [isFocused, setIsFocused] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const internalInputRef = useRef<TextInput>(null);
 
-  const isSecure = isPassword ? !showPassword : secureTextEntry;
+    useImperativeHandle(ref, () => internalInputRef.current as TextInput);
 
-  return (
-    <View style={[styles.container, containerStyle]}>
-      {(label || rightBadge) && (
-        <View style={styles.labelRow}>
-          {label && <Text style={styles.label}>{label}</Text>}
-          {rightBadge && <View style={styles.badgeWrapper}>{rightBadge}</View>}
-        </View>
-      )}
+    const isSecure = isPassword ? !showPassword : secureTextEntry;
 
-      <View
-        style={[
-          styles.inputWrapper,
-          isFocused && styles.inputWrapperFocused,
-          !!error && styles.inputWrapperError,
-        ]}
-      >
-        {leftIcon && <View style={styles.leftIconWrapper}>{leftIcon}</View>}
+    const handleFocusInput = () => {
+      internalInputRef.current?.focus();
+    };
 
-        <TextInput
-          style={[styles.input, inputStyle]}
-          placeholderTextColor="#94A3B8"
-          secureTextEntry={isSecure}
-          onFocus={(e) => {
-            setIsFocused(true);
-            onFocus?.(e);
-          }}
-          onBlur={(e) => {
-            setIsFocused(false);
-            onBlur?.(e);
-          }}
-          {...props}
-        />
-
-        {isPassword ? (
-          <Pressable
-            hitSlop={8}
-            onPress={() => setShowPassword((prev) => !prev)}
-            style={styles.rightIconWrapper}
-          >
-            <Ionicons
-              name={showPassword ? "eye-outline" : "eye-off-outline"}
-              size={20}
-              color="#64748B"
-            />
-          </Pressable>
-        ) : (
-          rightIcon && <View style={styles.rightIconWrapper}>{rightIcon}</View>
+    return (
+      <View style={[styles.container, containerStyle]}>
+        {(label || rightBadge) && (
+          <View style={styles.labelRow}>
+            {label && (
+              <Pressable onPress={handleFocusInput}>
+                <Text style={styles.label}>{label}</Text>
+              </Pressable>
+            )}
+            {rightBadge && <View style={styles.badgeWrapper}>{rightBadge}</View>}
+          </View>
         )}
-      </View>
 
-      {error ? (
-        <Text style={styles.errorText}>{error}</Text>
-      ) : helperText ? (
-        <Text style={styles.helperText}>{helperText}</Text>
-      ) : null}
-    </View>
-  );
-};
+        <Pressable
+          style={[
+            styles.inputWrapper,
+            isFocused && styles.inputWrapperFocused,
+            !!error && styles.inputWrapperError,
+          ]}
+          onPress={handleFocusInput}
+        >
+          {leftIcon && (
+            <View style={styles.leftIconWrapper} pointerEvents="none">
+              {leftIcon}
+            </View>
+          )}
+
+          <TextInput
+            ref={internalInputRef}
+            style={[styles.input, inputStyle]}
+            placeholderTextColor="#94A3B8"
+            secureTextEntry={isSecure}
+            onFocus={(e) => {
+              setIsFocused(true);
+              onFocus?.(e);
+            }}
+            onBlur={(e) => {
+              setIsFocused(false);
+              onBlur?.(e);
+            }}
+            {...props}
+          />
+
+          {isPassword ? (
+            <Pressable
+              hitSlop={10}
+              onPress={() => setShowPassword((prev) => !prev)}
+              style={styles.rightIconWrapper}
+            >
+              <Ionicons
+                name={showPassword ? "eye-outline" : "eye-off-outline"}
+                size={20}
+                color="#64748B"
+              />
+            </Pressable>
+          ) : (
+            rightIcon && <View style={styles.rightIconWrapper}>{rightIcon}</View>
+          )}
+        </Pressable>
+
+        {error ? (
+          <Text style={styles.errorText}>{error}</Text>
+        ) : helperText ? (
+          <Text style={styles.helperText}>{helperText}</Text>
+        ) : null}
+      </View>
+    );
+  }
+);
+
+Input.displayName = "Input";
 
 const styles = StyleSheet.create({
   container: {
@@ -158,6 +182,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
+    height: "100%",
     fontSize: 14,
     color: "#0F172A",
     paddingVertical: 0,
@@ -177,4 +202,3 @@ const styles = StyleSheet.create({
 });
 
 export default Input;
-

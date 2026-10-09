@@ -177,17 +177,19 @@ export const SignInScreen: React.FC = () => {
       </KeyboardAvoidingView>
 
       {/* Forgot Password 3-Step Wizard Modal */}
-      <ForgotPasswordModal
-        visible={isForgotPasswordVisible}
-        onClose={() => setIsForgotPasswordVisible(false)}
-        onSuccess={(email) => {
-          setEmailOrUsername(email);
-          Alert.alert(
-            "Berhasil",
-            "Kata sandi berhasil diperbarui. Silakan masuk menggunakan kata sandi baru Anda."
-          );
-        }}
-      />
+      {isForgotPasswordVisible && (
+        <ForgotPasswordModal
+          visible={isForgotPasswordVisible}
+          onClose={() => setIsForgotPasswordVisible(false)}
+          onSuccess={(email) => {
+            setEmailOrUsername(email);
+            Alert.alert(
+              "Berhasil",
+              "Kata sandi berhasil diperbarui. Silakan masuk menggunakan kata sandi baru Anda."
+            );
+          }}
+        />
+      )}
     </View>
   );
 };
