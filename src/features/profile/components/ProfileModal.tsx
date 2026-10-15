@@ -77,20 +77,28 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   };
 
   const handleDeleteProfile = (profile: Profile) => {
-    if (profiles.length <= 1) {
-      Alert.alert("Perhatian", "Minimal harus ada satu profil.");
+    if (!profile || !profile.id) {
+      console.error("[ProfileModal] Gagal menghapus profil: ID profil tidak valid", profile);
+      Alert.alert("Error", "ID profil tidak valid.");
       return;
     }
     Alert.alert(
       "Hapus Profil",
-      `Apakah Anda yakin ingin menghapus profil "${profile.name}"? Data yang tersimpan di profil ini akan dihapus.`,
+      `Apakah Anda yakin ingin menghapus profil "${profile.name}"? Semua data yang tersimpan di profil ini akan dihapus.`,
       [
         { text: "Batal", style: "cancel" },
         {
           text: "Hapus",
           style: "destructive",
-          onPress: () => {
-            onDeleteProfile?.(profile.id);
+          onPress: async () => {
+            try {
+              if (onDeleteProfile) {
+                await onDeleteProfile(profile.id);
+              }
+            } catch (error) {
+              console.error("[ProfileModal] Error saat menghapus profil:", error);
+              Alert.alert("Error", "Terjadi kesalahan saat menghapus profil.");
+            }
           },
         },
       ]
@@ -122,6 +130,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     return (name.slice(0, 2) || "VF").toUpperCase();
   };
 
+  if (!visible && !isSwitchAccountVisible) {
+    return null;
+  }
+
   return (
     <>
       {/* Main Profile Modal */}
@@ -152,91 +164,114 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
                   {/* Profile List */}
                   <ScrollView style={styles.profileList} bounces={false}>
-                    {profiles.map((profile) => {
-                      const isSelected = profile.id === selectedProfileId;
+                    {profiles.length === 0 ? (
+                      <View style={styles.emptyProfilesContainer}>
+                        <Ionicons
+                          name="folder-open-outline"
+                          size={36}
+                          color="#94A3B8"
+                        />
+                        <Text style={styles.emptyProfilesTitle}>
+                          Belum Ada Profil
+                        </Text>
+                        <Text style={styles.emptyProfilesSubtitle}>
+                          Buat profil baru di bawah untuk mulai mengelola transaksi & catatan keuangan Anda.
+                        </Text>
+                      </View>
+                    ) : (
+                      profiles.map((profile) => {
+                        const isSelected = profile.id === selectedProfileId;
 
-                      return (
-                        <Pressable
-                          key={profile.id}
-                          style={({ pressed }) => [
-                            styles.profileItem,
-                            isSelected && styles.profileItemSelected,
-                            pressed && styles.pressedState,
-                          ]}
-                          onPress={() => handleSelectProfile(profile.id)}
-                          accessibilityRole="radio"
-                          accessibilityState={{ selected: isSelected }}
-                        >
-                          <View style={styles.profileItemLeft}>
-                            <View
-                              style={[
-                                styles.avatarCircle,
-                                isSelected && styles.avatarCircleSelected,
+                        return (
+                          <View
+                            key={profile.id}
+                            style={[
+                              styles.profileItem,
+                              isSelected && styles.profileItemSelected,
+                            ]}
+                          >
+                            <Pressable
+                              style={({ pressed }) => [
+                                styles.profileItemLeftTouchable,
+                                pressed && styles.pressedState,
                               ]}
+                              onPress={() => handleSelectProfile(profile.id)}
+                              accessibilityRole="radio"
+                              accessibilityState={{ selected: isSelected }}
                             >
-                              <Text
+                              <View
                                 style={[
-                                  styles.avatarInitials,
-                                  isSelected && styles.avatarInitialsSelected,
+                                  styles.avatarCircle,
+                                  isSelected && styles.avatarCircleSelected,
                                 ]}
                               >
-                                {getInitials(profile.name)}
-                              </Text>
-                            </View>
-                            <View style={styles.profileTextCol}>
-                              <Text
-                                style={[
-                                  styles.profileItemName,
-                                  isSelected && styles.profileItemNameSelected,
-                                ]}
-                              >
-                                {profile.name}
-                              </Text>
-                              {isSelected && (
-                                <Text style={styles.profileActiveLabel}>
-                                  Profil Aktif
+                                <Text
+                                  style={[
+                                    styles.avatarInitials,
+                                    isSelected && styles.avatarInitialsSelected,
+                                  ]}
+                                >
+                                  {getInitials(profile.name)}
                                 </Text>
+                              </View>
+                              <View style={styles.profileTextCol}>
+                                <Text
+                                  style={[
+                                    styles.profileItemName,
+                                    isSelected && styles.profileItemNameSelected,
+                                  ]}
+                                  numberOfLines={1}
+                                >
+                                  {profile.name}
+                                </Text>
+                                {isSelected && (
+                                  <Text style={styles.profileActiveLabel}>
+                                    Profil Aktif
+                                  </Text>
+                                )}
+                              </View>
+                            </Pressable>
+
+                            <View style={styles.profileItemActions}>
+                              {/* Delete Profile button (available for all profiles) */}
+                              {onDeleteProfile && (
+                                <Pressable
+                                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                  style={({ pressed }) => [
+                                    styles.deleteProfileBtn,
+                                    pressed && { opacity: 0.6, backgroundColor: "#FEE2E2" },
+                                  ]}
+                                  onPress={() => handleDeleteProfile(profile)}
+                                  accessibilityRole="button"
+                                  accessibilityLabel={`Hapus profil ${profile.name}`}
+                                >
+                                  <Ionicons
+                                    name="trash-outline"
+                                    size={18}
+                                    color="#EF4444"
+                                  />
+                                </Pressable>
                               )}
-                            </View>
-                          </View>
 
-                          <View style={styles.profileItemActions}>
-                            {/* Delete Profile button (only shown if more than 1 profile) */}
-                            {profiles.length > 1 && onDeleteProfile && (
+                              {/* Radio Button */}
                               <Pressable
-                                hitSlop={8}
-                                style={({ pressed }) => [
-                                  styles.deleteProfileBtn,
-                                  pressed && { opacity: 0.5 },
-                                ]}
-                                onPress={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteProfile(profile);
-                                }}
-                                accessibilityRole="button"
-                                accessibilityLabel={`Hapus profil ${profile.name}`}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                onPress={() => handleSelectProfile(profile.id)}
                               >
-                                <Ionicons
-                                  name="trash-outline"
-                                  size={18}
-                                  color="#EF4444"
-                                />
+                                <View
+                                  style={[
+                                    styles.radioOuter,
+                                    isSelected && styles.radioOuterSelected,
+                                  ]}
+                                >
+                                  {isSelected && <View style={styles.radioInner} />}
+                                </View>
                               </Pressable>
-                            )}
-
-                            {/* Radio Button */}
-                            <View
-                              style={[
-                                styles.radioOuter,
-                                isSelected && styles.radioOuterSelected,
-                              ]}
-                            >
-                              {isSelected && <View style={styles.radioInner} />}
                             </View>
                           </View>
-                        </Pressable>
-                      );
-                    })}
+                        );
+                      })
+                    )}
                   </ScrollView>
 
                   {/* Add Profile Section */}
@@ -477,6 +512,31 @@ const styles = StyleSheet.create({
   profileList: {
     marginBottom: Spacing.lg,
   },
+  emptyProfilesContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: Spacing.xl,
+    paddingHorizontal: Spacing.md,
+    backgroundColor: "#F8FAFC",
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderStyle: "dashed",
+    marginBottom: Spacing.md,
+  },
+  emptyProfilesTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+    marginTop: Spacing.sm,
+  },
+  emptyProfilesSubtitle: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    textAlign: "center",
+    marginTop: 4,
+    lineHeight: 18,
+  },
   profileItem: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -493,6 +553,12 @@ const styles = StyleSheet.create({
     borderBottomColor: "transparent",
     borderWidth: 1,
     borderColor: "#1F4D47",
+  },
+  profileItemLeftTouchable: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    paddingRight: Spacing.sm,
   },
   profileItemLeft: {
     flexDirection: "row",

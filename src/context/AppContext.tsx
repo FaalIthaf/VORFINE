@@ -4,6 +4,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -23,7 +24,7 @@ import {
   sortSchedulesChronologically,
 } from "../utils/scheduleUtils";
 
-import { loadData, saveData, STORAGE_KEYS } from "../utils/storage";
+import { getAccountStorageKey, loadData, saveData, STORAGE_KEYS } from "../utils/storage";
 import { useAuth } from "@/features/auth";
 export interface AppContextType {
   // Real-time Time & Synchronization
@@ -74,6 +75,7 @@ export interface AppContextType {
   addProfile: (name: string) => void;
   deleteProfile: (id: string) => void;
   currentProfile: Profile;
+  resetStore: () => void;
 
   // Finance
   financeData: FinanceData;
@@ -183,37 +185,6 @@ useEffect(() => {
 }, []);
 
 
-// 3. Load persisted state from AsyncStorage on app start
-useEffect(() => {
-  (async () => {
-    const loadedProfiles = await loadData(STORAGE_KEYS.PROFILES, [] as Profile[]);
-    if (loadedProfiles.length) {
-      if (user?.fullName) {
-        setProfiles(
-          loadedProfiles.map((p) =>
-            p.id === "1" ? { ...p, name: user.fullName } : p
-          )
-        );
-      } else {
-        setProfiles(loadedProfiles);
-      }
-    }
-    const loadedSelected = await loadData(STORAGE_KEYS.SELECTED_PROFILE, "1");
-    setSelectedProfileId(loadedSelected);
-    const loadedFinance = await loadData(STORAGE_KEYS.FINANCE, {} as Record<string, FinanceData>);
-    if (Object.keys(loadedFinance).length) setFinanceByProfile(loadedFinance);
-    const loadedTx = await loadData(STORAGE_KEYS.TRANSACTIONS, {} as Record<string, TransactionItem[]>);
-    if (Object.keys(loadedTx).length) setTransactionsByProfile(loadedTx);
-    const loadedSched = await loadData(STORAGE_KEYS.SCHEDULES, {} as Record<string, ScheduleItem[]>);
-    if (Object.keys(loadedSched).length) setSchedulesByProfile(loadedSched);
-    const loadedNotifs = await loadData(STORAGE_KEYS.NOTIFICATIONS, {} as Record<string, NotificationItem[]>);
-    if (Object.keys(loadedNotifs).length) setNotificationsByProfile(loadedNotifs);
-  })();
-}, []);
-
-
-
-
   const formatPad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
 
   // Derived real-time Indonesian date/time strings
@@ -234,63 +205,114 @@ useEffect(() => {
   // Search query
   const [searchQuery, setSearchQuery] = useState<string>("");
 
-  // Profiles State (profile 1 is dynamically mapped to registered user's full name)
-  const [profiles, setProfiles] = useState<Profile[]>([
-    { id: "1", name: user?.fullName || "Profil Utama", isCurrent: true },
-    { id: "2", name: "Akun Bisnis / Toko", isCurrent: false },
-    { id: "3", name: "Tabungan Pribadi", isCurrent: false },
-  ]);
-  const [selectedProfileId, setSelectedProfileId] = useState<string>("1");
+  // Profiles State (Starts EMPTY for clean isolation per user account - Task 2 & 3)
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [selectedProfileId, setSelectedProfileId] = useState<string>("");
 
-  // Dynamically sync profile 1 when active user profile changes
-  useEffect(() => {
-    if (user?.fullName) {
-      setProfiles((prev) =>
-        prev.map((p) => (p.id === "1" ? { ...p, name: user.fullName } : p))
-      );
-    }
-  }, [user?.fullName]);
-
-  // 9. Isolated State Partitioned by Profile ID
+  // Isolated State Partitioned by Profile ID
   const [financeByProfile, setFinanceByProfile] = useState<
     Record<string, FinanceData>
-  >({
-    "1": createDefaultFinanceData("September"),
-    "2": createDefaultFinanceData("September"),
-    "3": createDefaultFinanceData("September"),
-  });
+  >({});
 
   const [transactionsByProfile, setTransactionsByProfile] = useState<
     Record<string, TransactionItem[]>
-  >({
-    "1": [],
-    "2": [],
-    "3": [],
-  });
+  >({});
 
   const [schedulesByProfile, setSchedulesByProfile] = useState<
     Record<string, ScheduleItem[]>
-  >({
-    "1": [],
-    "2": [],
-    "3": [],
-  });
+  >({});
 
   const [notificationsByProfile, setNotificationsByProfile] = useState<
     Record<string, NotificationItem[]>
-  >({
-    "1": [],
-    "2": [],
-    "3": [],
-  });
+  >({});
+
+  // Reset store to clear all memory on logout, account switch, or new registration
+  const resetStore = useCallback(() => {
+    setProfiles([]);
+    setSelectedProfileId("");
+    setFinanceByProfile({});
+    setTransactionsByProfile({});
+    setSchedulesByProfile({});
+    setNotificationsByProfile({});
+    setSearchQuery("");
+  }, []);
+
+  // Account-scoped storage key helper (ensures zero data leakage between accounts)
+  const getAccountKey = useCallback(
+    (baseKey: string) => {
+      const accountIdentifier = user?.id || user?.email || null;
+      return getAccountStorageKey(baseKey, accountIdentifier);
+    },
+    [user?.id, user?.email]
+  );
+
+  // Synchronize state and load data strictly scoped to active user
+  useEffect(() => {
+    let isCancelled = false;
+
+    const syncAccountState = async () => {
+      if (!user?.id && !user?.email) {
+        // No user logged in -> clear state completely
+        resetStore();
+        return;
+      }
+
+      try {
+        const accountId = user.id || user.email;
+        const profilesKey = getAccountStorageKey(STORAGE_KEYS.PROFILES, accountId);
+        const selectedKey = getAccountStorageKey(STORAGE_KEYS.SELECTED_PROFILE, accountId);
+        const financeKey = getAccountStorageKey(STORAGE_KEYS.FINANCE, accountId);
+        const txKey = getAccountStorageKey(STORAGE_KEYS.TRANSACTIONS, accountId);
+        const schedKey = getAccountStorageKey(STORAGE_KEYS.SCHEDULES, accountId);
+        const notifsKey = getAccountStorageKey(STORAGE_KEYS.NOTIFICATIONS, accountId);
+
+        const loadedProfiles = await loadData<Profile[]>(profilesKey, []);
+        if (isCancelled) return;
+
+        const loadedSelected = await loadData<string>(selectedKey, "");
+        const loadedFinance = await loadData<Record<string, FinanceData>>(financeKey, {});
+        const loadedTx = await loadData<Record<string, TransactionItem[]>>(txKey, {});
+        const loadedSched = await loadData<Record<string, ScheduleItem[]>>(schedKey, {});
+        const loadedNotifs = await loadData<Record<string, NotificationItem[]>>(notifsKey, {});
+
+        setProfiles(loadedProfiles);
+        setSelectedProfileId(
+          loadedSelected || (loadedProfiles.length > 0 ? loadedProfiles[0].id : "")
+        );
+        setFinanceByProfile(loadedFinance);
+        setTransactionsByProfile(loadedTx);
+        setSchedulesByProfile(loadedSched);
+        setNotificationsByProfile(loadedNotifs);
+      } catch (err) {
+        console.error("Gagal memuat data akun di AppContext:", err);
+        if (!isCancelled) {
+          resetStore();
+        }
+      }
+    };
+
+    syncAccountState();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [user?.id, user?.email, resetStore]);
 
   // Track triggered alerts to prevent duplicate notifications
   const triggeredBudgetAlerts = useRef<Set<string>>(new Set());
   const triggeredScheduleAlerts = useRef<Set<string>>(new Set());
 
-  // Current active profile data
-  const currentProfile =
-    profiles.find((p) => p.id === selectedProfileId) || profiles[0];
+  // Current active profile data (safe fallback when profiles is empty)
+  const currentProfile: Profile = useMemo(() => {
+    const found = profiles.find((p) => p.id === selectedProfileId);
+    if (found) return found;
+    if (profiles.length > 0) return profiles[0];
+    return {
+      id: "",
+      name: user?.fullName || "Belum ada profil",
+      isCurrent: false,
+    };
+  }, [profiles, selectedProfileId, user?.fullName]);
 
   const activeFinanceData =
     financeByProfile[selectedProfileId] || createDefaultFinanceData("September");
@@ -527,7 +549,7 @@ useEffect(() => {
           ...prev,
           [selectedProfileId]: [newItem, ...(prev[selectedProfileId] || [])],
         };
-        saveData(STORAGE_KEYS.TRANSACTIONS, updated);
+        saveData(getAccountKey(STORAGE_KEYS.TRANSACTIONS), updated);
         return updated;
       });
 
@@ -542,7 +564,7 @@ useEffect(() => {
         );
       }
     },
-    [financeByProfile, selectedProfileId, checkBudgetThresholds],
+    [financeByProfile, selectedProfileId, checkBudgetThresholds, getAccountKey],
   );
 
   const deleteTransaction = useCallback(
@@ -554,11 +576,11 @@ useEffect(() => {
             (item) => item.id !== id,
           ),
         };
-        saveData(STORAGE_KEYS.TRANSACTIONS, updated);
+        saveData(getAccountKey(STORAGE_KEYS.TRANSACTIONS), updated);
         return updated;
       });
     },
-    [selectedProfileId],
+    [selectedProfileId, getAccountKey],
   );
 
   // Schedule Actions
@@ -579,7 +601,7 @@ useEffect(() => {
           ...prev,
           [selectedProfileId]: list.sort(sortSchedulesChronologically),
         };
-        saveData(STORAGE_KEYS.SCHEDULES, updated);
+        saveData(getAccountKey(STORAGE_KEYS.SCHEDULES), updated);
         return updated;
       });
 
@@ -617,7 +639,7 @@ useEffect(() => {
         }
       }
     },
-    [selectedDateKey, selectedProfileId, addNotification],
+    [selectedDateKey, selectedProfileId, addNotification, getAccountKey],
   );
 
   const updateSchedule = useCallback(
@@ -630,11 +652,11 @@ useEffect(() => {
           ...prev,
           [selectedProfileId]: list.sort(sortSchedulesChronologically),
         };
-        saveData(STORAGE_KEYS.SCHEDULES, updated);
+        saveData(getAccountKey(STORAGE_KEYS.SCHEDULES), updated);
         return updated;
       });
     },
-    [selectedProfileId],
+    [selectedProfileId, getAccountKey],
   );
 
   const deleteSchedule = useCallback(
@@ -646,11 +668,11 @@ useEffect(() => {
             (item) => item.id !== id,
           ),
         };
-        saveData(STORAGE_KEYS.SCHEDULES, updated);
+        saveData(getAccountKey(STORAGE_KEYS.SCHEDULES), updated);
         return updated;
       });
     },
-    [selectedProfileId],
+    [selectedProfileId, getAccountKey],
   );
 
   const toggleCompleteSchedule = useCallback(
@@ -662,11 +684,11 @@ useEffect(() => {
             item.id === id ? { ...item, completed: !item.completed } : item,
           ),
         };
-        saveData(STORAGE_KEYS.SCHEDULES, updated);
+        saveData(getAccountKey(STORAGE_KEYS.SCHEDULES), updated);
         return updated;
       });
     },
-    [selectedProfileId],
+    [selectedProfileId, getAccountKey],
   );
 
   // 3. Background Scheduler / Listener for Schedule Reminders (Ticker checking every 5 seconds)
@@ -746,99 +768,121 @@ useEffect(() => {
 
   // 9. Profile Actions with Complete State Isolation and Reset
   const selectProfile = (id: string) => {
-    setSelectedProfileId(id);
-    const updated = profiles.map((p) => ({ ...p, isCurrent: p.id === id }));
-    setProfiles(updated);
-    saveData(STORAGE_KEYS.SELECTED_PROFILE, id);
-    saveData(STORAGE_KEYS.PROFILES, updated);
+    try {
+      setSelectedProfileId(id);
+      const updated = profiles.map((p) => ({ ...p, isCurrent: p.id === id }));
+      setProfiles(updated);
+      saveData(getAccountKey(STORAGE_KEYS.SELECTED_PROFILE), id);
+      saveData(getAccountKey(STORAGE_KEYS.PROFILES), updated);
+    } catch (err) {
+      console.error("selectProfile error:", err);
+    }
   };
 
   const addProfile = (name: string) => {
-    const newId = Date.now().toString();
-    const newProfile: Profile = {
-      id: newId,
-      name,
-      isCurrent: true,
-    };
+    try {
+      const newId = Date.now().toString();
+      const newProfile: Profile = {
+        id: newId,
+        name,
+        isCurrent: true,
+      };
 
-    // Initialize clean isolated state for the new profile
-    const newFinance = {
-      ...financeByProfile,
-      [newId]: createDefaultFinanceData("September"),
-    };
-    const newTx = {
-      ...transactionsByProfile,
-      [newId]: [],
-    };
-    const newSched = {
-      ...schedulesByProfile,
-      [newId]: [],
-    };
-    const newNotif = {
-      ...notificationsByProfile,
-      [newId]: [],
-    };
+      // Initialize clean isolated state for the new profile
+      const newFinance = {
+        ...financeByProfile,
+        [newId]: createDefaultFinanceData("September"),
+      };
+      const newTx = {
+        ...transactionsByProfile,
+        [newId]: [],
+      };
+      const newSched = {
+        ...schedulesByProfile,
+        [newId]: [],
+      };
+      const newNotif = {
+        ...notificationsByProfile,
+        [newId]: [],
+      };
 
-    setFinanceByProfile(newFinance);
-    setTransactionsByProfile(newTx);
-    setSchedulesByProfile(newSched);
-    setNotificationsByProfile(newNotif);
+      setFinanceByProfile(newFinance);
+      setTransactionsByProfile(newTx);
+      setSchedulesByProfile(newSched);
+      setNotificationsByProfile(newNotif);
 
-    const updatedProfiles = [
-      ...profiles.map((p) => ({ ...p, isCurrent: false })),
-      newProfile,
-    ];
+      const updatedProfiles = [
+        ...profiles.map((p) => ({ ...p, isCurrent: false })),
+        newProfile,
+      ];
 
-    setProfiles(updatedProfiles);
-    setSelectedProfileId(newId);
+      setProfiles(updatedProfiles);
+      setSelectedProfileId(newId);
 
-    saveData(STORAGE_KEYS.PROFILES, updatedProfiles);
-    saveData(STORAGE_KEYS.SELECTED_PROFILE, newId);
-    saveData(STORAGE_KEYS.FINANCE, newFinance);
-    saveData(STORAGE_KEYS.TRANSACTIONS, newTx);
-    saveData(STORAGE_KEYS.SCHEDULES, newSched);
-    saveData(STORAGE_KEYS.NOTIFICATIONS, newNotif);
+      saveData(getAccountKey(STORAGE_KEYS.PROFILES), updatedProfiles);
+      saveData(getAccountKey(STORAGE_KEYS.SELECTED_PROFILE), newId);
+      saveData(getAccountKey(STORAGE_KEYS.FINANCE), newFinance);
+      saveData(getAccountKey(STORAGE_KEYS.TRANSACTIONS), newTx);
+      saveData(getAccountKey(STORAGE_KEYS.SCHEDULES), newSched);
+      saveData(getAccountKey(STORAGE_KEYS.NOTIFICATIONS), newNotif);
+    } catch (err) {
+      console.error("addProfile error:", err);
+    }
   };
 
   const deleteProfile = (id: string) => {
-    // If only 1 profile or attempting to delete when length <= 1, prevent
-    if (profiles.length <= 1) return;
+    try {
+      if (!id) {
+        console.warn("deleteProfile: ID profil tidak ditemukan");
+        return;
+      }
 
-    const remaining = profiles.filter((p) => p.id !== id);
-    const newActiveId = selectedProfileId === id ? remaining[0].id : selectedProfileId;
-    const updatedProfiles = remaining.map((p) => ({ ...p, isCurrent: p.id === newActiveId }));
+      const remaining = profiles.filter((p) => p.id !== id);
+      const newActiveId =
+        selectedProfileId === id
+          ? remaining.length > 0
+            ? remaining[0].id
+            : ""
+          : selectedProfileId;
+      const updatedProfiles = remaining.map((p) => ({
+        ...p,
+        isCurrent: p.id === newActiveId,
+      }));
 
-    setProfiles(updatedProfiles);
-    setSelectedProfileId(newActiveId);
+      setProfiles(updatedProfiles);
+      setSelectedProfileId(newActiveId);
 
-    // Clean up associated data
-    setFinanceByProfile((prev) => {
-      const copy = { ...prev };
-      delete copy[id];
-      saveData(STORAGE_KEYS.FINANCE, copy);
-      return copy;
-    });
-    setTransactionsByProfile((prev) => {
-      const copy = { ...prev };
-      delete copy[id];
-      saveData(STORAGE_KEYS.TRANSACTIONS, copy);
-      return copy;
-    });
-    setSchedulesByProfile((prev) => {
-      const copy = { ...prev };
-      delete copy[id];
-      saveData(STORAGE_KEYS.SCHEDULES, copy);
-      return copy;
-    });
-    setNotificationsByProfile((prev) => {
-      const copy = { ...prev };
-      delete copy[id];
-      saveData(STORAGE_KEYS.NOTIFICATIONS, copy);
-      return copy;
-    });
+      saveData(getAccountKey(STORAGE_KEYS.PROFILES), updatedProfiles);
+      saveData(getAccountKey(STORAGE_KEYS.SELECTED_PROFILE), newActiveId);
 
-    saveData(STORAGE_KEYS.PROFILES, updatedProfiles);
-    saveData(STORAGE_KEYS.SELECTED_PROFILE, newActiveId);
+      // Clean up associated data
+      setFinanceByProfile((prev) => {
+        const copy = { ...prev };
+        delete copy[id];
+        saveData(getAccountKey(STORAGE_KEYS.FINANCE), copy);
+        return copy;
+      });
+      setTransactionsByProfile((prev) => {
+        const copy = { ...prev };
+        delete copy[id];
+        saveData(getAccountKey(STORAGE_KEYS.TRANSACTIONS), copy);
+        return copy;
+      });
+      setSchedulesByProfile((prev) => {
+        const copy = { ...prev };
+        delete copy[id];
+        saveData(getAccountKey(STORAGE_KEYS.SCHEDULES), copy);
+        return copy;
+      });
+      setNotificationsByProfile((prev) => {
+        const copy = { ...prev };
+        delete copy[id];
+        saveData(getAccountKey(STORAGE_KEYS.NOTIFICATIONS), copy);
+        return copy;
+      });
+    } catch (err) {
+      console.error("deleteProfile error:", err);
+    }
   };
 
   const updateFinanceData = useCallback(
@@ -860,11 +904,11 @@ useEffect(() => {
           ...prev,
           [selectedProfileId]: updated,
         };
-        saveData(STORAGE_KEYS.FINANCE, newMap);
+        saveData(getAccountKey(STORAGE_KEYS.FINANCE), newMap);
         return newMap;
       });
     },
-    [selectedProfileId, checkBudgetThresholds],
+    [selectedProfileId, checkBudgetThresholds, getAccountKey],
   );
 
   return (
@@ -897,6 +941,7 @@ useEffect(() => {
         addProfile,
         deleteProfile,
         currentProfile,
+        resetStore,
         financeData: activeFinanceData,
         updateFinanceData,
         transactions: activeTransactions,
