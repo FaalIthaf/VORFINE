@@ -1,3 +1,6 @@
+import { BrandLogo } from "@/components/BrandLogo";
+import { Button, Checkbox, Input } from "@/components/ui";
+import { BorderRadius, Colors, Spacing } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -15,9 +18,6 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AuthFooter } from "../components/AuthFooter";
 import { ForgotPasswordModal } from "../components/ForgotPasswordModal";
-import { BrandLogo } from "@/components/BrandLogo";
-import { Button, Checkbox, Input } from "@/components/ui";
-import { BorderRadius, Colors, Spacing } from "@/constants/theme";
 import { useAuth } from "../context/AuthContext";
 
 export const SignInScreen: React.FC = () => {
@@ -117,7 +117,9 @@ export const SignInScreen: React.FC = () => {
               placeholder="contoh@vorfine.com"
               keyboardType="email-address"
               autoCapitalize="none"
-              leftIcon={<Ionicons name="mail-outline" size={18} color="#94A3B8" />}
+              leftIcon={
+                <Ionicons name="mail-outline" size={18} color="#94A3B8" />
+              }
             />
 
             <Input
@@ -129,7 +131,13 @@ export const SignInScreen: React.FC = () => {
               }}
               placeholder="Masukkan kata sandi"
               isPassword
-              leftIcon={<Ionicons name="lock-closed-outline" size={18} color="#94A3B8" />}
+              leftIcon={
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={18}
+                  color="#94A3B8"
+                />
+              }
             />
 
             {/* Remember Me & Forgot Password */}
@@ -150,13 +158,17 @@ export const SignInScreen: React.FC = () => {
               onPress={handleLogin}
               loading={isLoading}
               size="lg"
-              rightIcon={<Ionicons name="arrow-forward" size={18} color={Colors.white} />}
+              rightIcon={
+                <Ionicons name="arrow-forward" size={18} color={Colors.white} />
+              }
               style={styles.submitBtn}
             />
 
             {/* Register Link */}
             <View style={styles.switchAuthRow}>
-              <Text style={styles.switchAuthPrompt}>Belum memiliki akun VORFÍNE? </Text>
+              <Text style={styles.switchAuthPrompt}>
+                Belum memiliki akun VORFÍNE?{" "}
+              </Text>
               <Pressable onPress={() => router.push("/auth/register" as any)}>
                 <Text style={styles.switchAuthLink}>Daftar Akun Baru</Text>
               </Pressable>
@@ -166,7 +178,9 @@ export const SignInScreen: React.FC = () => {
             <View style={styles.trustBadgeContainer}>
               <View style={styles.trustBadge}>
                 <Ionicons name="shield-checkmark" size={14} color="#16A34A" />
-                <Text style={styles.trustBadgeText}>Keamanan Data Terjamin & Terenkripsi</Text>
+                <Text style={styles.trustBadgeText}>
+                  Keamanan Data Terjamin & Terenkripsi
+                </Text>
               </View>
             </View>
           </View>
@@ -185,7 +199,7 @@ export const SignInScreen: React.FC = () => {
             setEmailOrUsername(email);
             Alert.alert(
               "Berhasil",
-              "Kata sandi berhasil diperbarui. Silakan masuk menggunakan kata sandi baru Anda."
+              "Kata sandi berhasil diperbarui. Silakan masuk menggunakan kata sandi baru Anda.",
             );
           }}
         />

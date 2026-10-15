@@ -1,10 +1,10 @@
+import { AppProvider } from "@/context/AppContext";
+import { AuthProvider, useAuth } from "@/features/auth";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { AppProvider } from "@/context/AppContext";
-import { AuthProvider, useAuth } from "@/features/auth";
 
 /**
  * Auth Guard component:
@@ -36,12 +36,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       // Authenticated user trying to access login/register
       router.replace("/" as any);
     }
-  }, [
-    isAuthenticated,
-    isLoading,
-    isAuthGroup,
-    isLoginPageOrRegister,
-  ]);
+  }, [isAuthenticated, isLoading, isAuthGroup, isLoginPageOrRegister]);
 
   // Prevent flash of protected dashboard content before auth check completes or redirect fires
   if (isLoading || (!isAuthenticated && !isAuthGroup)) {
