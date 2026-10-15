@@ -1,32 +1,32 @@
+import { BottomNavBar } from "@/components/BottomNavBar";
+import { Header } from "@/components/Header";
+import { BorderRadius, Colors, Spacing } from "@/constants/theme";
+import { useApp } from "@/context/AppContext";
+import { useAuth } from "@/features/auth";
+import { ProfileModal } from "@/features/profile";
+import { ScheduleSection } from "@/features/schedule";
+import { TransactionItemCard } from "@/features/transaction";
+import { TabType } from "@/types";
+import { parseAmountToNumber, parseTransactionDate } from "@/utils/dateUtils";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
-  Alert,
-  Modal,
-  Platform,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  ToastAndroid,
-  TouchableWithoutFeedback,
-  View,
+    Alert,
+    Modal,
+    Platform,
+    Pressable,
+    RefreshControl,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    ToastAndroid,
+    TouchableWithoutFeedback,
+    View,
 } from "react-native";
 import { BalanceCard } from "../components/BalanceCard";
-import { BottomNavBar } from "@/components/BottomNavBar";
 import { FinanceSummary } from "../components/FinanceSummary";
-import { Header } from "@/components/Header";
-import { ProfileModal } from "@/features/profile";
-import { ScheduleSection } from "@/features/schedule";
-import { TransactionItemCard } from "@/features/transaction";
-import { BorderRadius, Colors, Spacing } from "@/constants/theme";
-import { useApp } from "@/context/AppContext";
-import { useAuth } from "@/features/auth";
-import { TabType } from "@/types";
-import { parseAmountToNumber, parseTransactionDate } from "@/utils/dateUtils";
 import { InfoScreen } from "./InfoScreen";
 
 export const HomeScreen: React.FC = () => {
@@ -278,8 +278,11 @@ export const HomeScreen: React.FC = () => {
               </Pressable>
             </View>
 
-            {/* List Transaksi Terbaru */}
-            {transactions.slice(0, 3).map((item) => (
+            {/* List Transaksi Terbaru — deduplikasi ID sebelum render */}
+            {transactions
+              .filter((item, idx, arr) => arr.findIndex((t) => t.id === item.id) === idx)
+              .slice(0, 3)
+              .map((item) => (
               <TransactionItemCard
                 key={item.id}
                 title={item.title}
@@ -368,7 +371,9 @@ export const HomeScreen: React.FC = () => {
                         onPress={() => {
                           setExpensePeriod(option.key as any);
                           setIsPeriodModalVisible(false);
-                          showFeedback(`Menampilkan pengeluaran ${option.label}`);
+                          showFeedback(
+                            `Menampilkan pengeluaran ${option.label}`,
+                          );
                         }}
                       >
                         <View style={styles.periodOptionTextWrapper}>
@@ -402,7 +407,7 @@ export const HomeScreen: React.FC = () => {
                   style={styles.closePeriodBtn}
                   onPress={() => setIsPeriodModalVisible(false)}
                 >
-                  <Text style={styles.closePeriodBtnText}>Tutup</Text>
+                  <Text style={styles.closePeriodBtnText}>Buka</Text>
                 </Pressable>
               </View>
             </TouchableWithoutFeedback>
@@ -430,7 +435,6 @@ export const HomeScreen: React.FC = () => {
         }}
       />
 
-      {/* Bottom Navigation Bar */}
       <BottomNavBar activeTab={activeTab} onSelectTab={handleTabSelect} />
     </View>
   );
