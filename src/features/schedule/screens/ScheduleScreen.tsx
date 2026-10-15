@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { AddScheduleModal } from "../components/AddScheduleModal";
 import { BottomNavBar } from "@/components/BottomNavBar";
-import { CalendarWidget } from "@/features/dashboard";
+import { CalendarWidget } from "@/features/dashboard/components/CalendarWidget";
 import { ScheduleHeader } from "../components/ScheduleHeader";
 import { ScheduleSection } from "../components/ScheduleSection";
 import { BorderRadius, Colors, Spacing } from "@/constants/theme";

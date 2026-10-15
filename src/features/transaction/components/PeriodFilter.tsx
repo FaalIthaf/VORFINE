@@ -102,55 +102,126 @@ export const PeriodFilter: React.FC<PeriodFilterProps> = ({
   const curMonth = now.getMonth();
   const curDay = now.getDate();
 
-  // Day options
-  const yesterday = new Date(curYear, curMonth, curDay - 1);
-  const dayOptions = [
-    {
-      label: "Hari Ini",
-      periodText: `${curDay} ${MONTH_SHORT_ID[curMonth]} ${curYear}`,
-      options: { year: curYear, month: curMonth, day: curDay },
-    },
-    {
-      label: "Kemarin",
-      periodText: `${yesterday.getDate()} ${MONTH_SHORT_ID[yesterday.getMonth()]} ${yesterday.getFullYear()}`,
-      options: {
-        year: yesterday.getFullYear(),
-        month: yesterday.getMonth(),
-        day: yesterday.getDate(),
-      },
-    },
-    {
-      label: "Awal Bulan (1 Sep)",
-      periodText: `1 Sep 2026`,
-      options: { year: 2026, month: 8, day: 1 },
-    },
-  ];
+  // Calendar State for 'Hari' (Day) Tab
+  const [calYear, setCalYear] = useState<number>(curYear);
+  const [calMonth, setCalMonth] = useState<number>(curMonth);
+  const [calSelectedDay, setCalSelectedDay] = useState<number>(curDay);
 
-  // Month options
-  const prevMonthIndex = curMonth === 0 ? 11 : curMonth - 1;
-  const prevMonthYear = curMonth === 0 ? curYear - 1 : curYear;
-  const monthOptions = [
-    {
-      label: "Bulan Ini",
-      periodText: `${MONTH_SHORT_ID[curMonth]} ${curYear}`,
-      options: { year: curYear, month: curMonth },
-    },
-    {
-      label: "Bulan Lalu",
-      periodText: `${MONTH_SHORT_ID[prevMonthIndex]} ${prevMonthYear}`,
-      options: { year: prevMonthYear, month: prevMonthIndex },
-    },
-    {
-      label: "Juli 2026",
-      periodText: "Jul 2026",
-      options: { year: 2026, month: 6 },
-    },
-    {
-      label: "Juni 2026",
-      periodText: "Jun 2026",
-      options: { year: 2026, month: 5 },
-    },
-  ];
+  const handlePrevCalMonth = () => {
+    if (calMonth === 0) {
+      setCalMonth(11);
+      setCalYear((y) => y - 1);
+    } else {
+      setCalMonth((m) => m - 1);
+    }
+  };
+
+  const handleNextCalMonth = () => {
+    if (calMonth === 11) {
+      setCalMonth(0);
+      setCalYear((y) => y + 1);
+    } else {
+      setCalMonth((m) => m + 1);
+    }
+  };
+
+  const handleSelectCalDay = (cellDay: number, offset = 0) => {
+    let targetYear = calYear;
+    let targetMonth = calMonth;
+
+    if (offset === -1) {
+      if (calMonth === 0) {
+        targetMonth = 11;
+        targetYear = calYear - 1;
+      } else {
+        targetMonth = calMonth - 1;
+      }
+      setCalMonth(targetMonth);
+      setCalYear(targetYear);
+    } else if (offset === 1) {
+      if (calMonth === 11) {
+        targetMonth = 0;
+        targetYear = calYear + 1;
+      } else {
+        targetMonth = calMonth + 1;
+      }
+      setCalMonth(targetMonth);
+      setCalYear(targetYear);
+    }
+
+    setCalSelectedDay(cellDay);
+
+    const isToday =
+      targetYear === curYear &&
+      targetMonth === curMonth &&
+      cellDay === curDay;
+
+    const label = isToday ? "Hari Ini" : `${cellDay} ${MONTH_SHORT_ID[targetMonth]}`;
+    const periodText = `${cellDay} ${MONTH_SHORT_ID[targetMonth]} ${targetYear}`;
+
+    handleSelectOption("day", label, periodText, {
+      year: targetYear,
+      month: targetMonth,
+      day: cellDay,
+    });
+  };
+
+  // Compute Calendar Grid
+  const daysInCalMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const firstDayOfCalWeek = new Date(calYear, calMonth, 1).getDay();
+  const daysInPrevCalMonth = new Date(calYear, calMonth, 0).getDate();
+
+  const calGridCells: {
+    day: number;
+    isCurrentMonth: boolean;
+    offset: number;
+  }[] = [];
+
+  // 1. Leading days from previous month
+  for (let i = firstDayOfCalWeek - 1; i >= 0; i--) {
+    calGridCells.push({
+      day: daysInPrevCalMonth - i,
+      isCurrentMonth: false,
+      offset: -1,
+    });
+  }
+
+  // 2. Current month days
+  for (let d = 1; d <= daysInCalMonth; d++) {
+    calGridCells.push({
+      day: d,
+      isCurrentMonth: true,
+      offset: 0,
+    });
+  }
+
+  // 3. Trailing days to finish the week
+  const remainingCalCells = (7 - (calGridCells.length % 7)) % 7;
+  for (let d = 1; d <= remainingCalCells; d++) {
+    calGridCells.push({
+      day: d,
+      isCurrentMonth: false,
+      offset: 1,
+    });
+  }
+
+  // Month options (dinamis 4 bulan ke belakang dari saat ini)
+  const monthOptions = Array.from({ length: 4 }).map((_, i) => {
+    const d = new Date(curYear, curMonth - i, 1);
+    const m = d.getMonth();
+    const y = d.getFullYear();
+    const label =
+      i === 0
+        ? "Bulan Ini"
+        : i === 1
+          ? "Bulan Lalu"
+          : `${MONTH_NAMES_ID[m]} ${y}`;
+    return {
+      label,
+      periodText: `${MONTH_SHORT_ID[m]} ${y}`,
+      options: { year: y, month: m },
+    };
+  });
 
   // Year options
   const yearOptions = [
@@ -321,37 +392,117 @@ export const PeriodFilter: React.FC<PeriodFilterProps> = ({
                 </Pressable>
               )}
 
-              {activeTab === "day" &&
-                dayOptions.map((opt, idx) => {
-                  const isCur =
-                    currentMode === "day" && currentPeriodText === opt.periodText;
-                  return (
+              {activeTab === "day" && (
+                <View style={styles.calendarContainer}>
+                  {/* Navigator Bulan */}
+                  <View style={styles.calHeaderRow}>
                     <Pressable
-                      key={`day-${idx}`}
-                      style={[styles.optionRow, isCur && styles.optionRowSelected]}
-                      onPress={() =>
-                        handleSelectOption(
-                          "day",
-                          opt.label,
-                          opt.periodText,
-                          opt.options,
-                        )
-                      }
+                      style={styles.calNavArrow}
+                      onPress={handlePrevCalMonth}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel="Bulan Sebelumnya"
                     >
-                      <View style={styles.optionTextCol}>
-                        <Text style={styles.optionLabel}>{opt.label}</Text>
-                        <Text style={styles.optionSub}>{opt.periodText}</Text>
-                      </View>
-                      {isCur && (
-                        <Ionicons
-                          name="checkmark-circle"
-                          size={20}
-                          color={Colors.primary}
-                        />
-                      )}
+                      <Ionicons
+                        name="chevron-back"
+                        size={18}
+                        color={Colors.primary}
+                      />
                     </Pressable>
-                  );
-                })}
+
+                    <Text style={styles.calMonthTitle}>
+                      {MONTH_NAMES_ID[calMonth]} {calYear}
+                    </Text>
+
+                    <Pressable
+                      style={styles.calNavArrow}
+                      onPress={handleNextCalMonth}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel="Bulan Berikutnya"
+                    >
+                      <Ionicons
+                        name="chevron-forward"
+                        size={18}
+                        color={Colors.primary}
+                      />
+                    </Pressable>
+                  </View>
+
+                  {/* Header Nama Hari */}
+                  <View style={styles.calDayNamesRow}>
+                    {["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"].map(
+                      (d) => (
+                        <Text key={d} style={styles.calDayNameText}>
+                          {d}
+                        </Text>
+                      ),
+                    )}
+                  </View>
+
+                  {/* Grid Tanggal */}
+                  <View style={styles.calGrid}>
+                    {calGridCells.map((cell, idx) => {
+                      const isSelected =
+                        cell.isCurrentMonth &&
+                        cell.day === calSelectedDay &&
+                        currentMode === "day";
+                      const isToday =
+                        cell.isCurrentMonth &&
+                        cell.day === curDay &&
+                        calMonth === curMonth &&
+                        calYear === curYear;
+
+                      return (
+                        <Pressable
+                          key={`cell-${idx}`}
+                          style={[
+                            styles.calCell,
+                            isSelected && styles.calCellSelected,
+                            isToday && !isSelected && styles.calCellToday,
+                          ]}
+                          onPress={() =>
+                            handleSelectCalDay(cell.day, cell.offset)
+                          }
+                          accessibilityRole="button"
+                          accessibilityLabel={`Tanggal ${cell.day} ${MONTH_SHORT_ID[calMonth]}`}
+                        >
+                          <Text
+                            style={[
+                              styles.calCellText,
+                              !cell.isCurrentMonth && styles.calCellTextInactive,
+                              isSelected && styles.calCellTextSelected,
+                              isToday && !isSelected && styles.calCellTextToday,
+                            ]}
+                          >
+                            {cell.day}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+
+                  {/* Quick Action: Tombol Hari Ini */}
+                  <View style={styles.calBottomActions}>
+                    <Pressable
+                      style={styles.quickTodayBtn}
+                      onPress={() => {
+                        setCalYear(curYear);
+                        setCalMonth(curMonth);
+                        setCalSelectedDay(curDay);
+                        handleSelectCalDay(curDay, 0);
+                      }}
+                    >
+                      <Ionicons
+                        name="today-outline"
+                        size={15}
+                        color={Colors.primary}
+                      />
+                      <Text style={styles.quickTodayText}>Pilih Hari Ini</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              )}
 
               {activeTab === "month" &&
                 monthOptions.map((opt, idx) => {
@@ -565,7 +716,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   optionsScrollView: {
-    maxHeight: 280,
+    maxHeight: 350,
   },
   optionRow: {
     flexDirection: "row",
@@ -594,6 +745,102 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     color: Colors.textSecondary,
     marginTop: 2,
+  },
+  // Calendar specific styles
+  calendarContainer: {
+    backgroundColor: "#F8F9FA",
+    borderRadius: BorderRadius.md,
+    padding: Spacing.sm + 2,
+    borderWidth: 1,
+    borderColor: "#E9ECEF",
+  },
+  calHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: Spacing.sm,
+    paddingHorizontal: 4,
+  },
+  calNavArrow: {
+    padding: 6,
+    borderRadius: BorderRadius.round,
+    backgroundColor: "#E8F4F5",
+  },
+  calMonthTitle: {
+    fontSize: 13.5,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+  },
+  calDayNamesRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 6,
+    paddingHorizontal: 2,
+  },
+  calDayNameText: {
+    width: "14.28%",
+    textAlign: "center",
+    fontSize: 11,
+    fontWeight: "600",
+    color: Colors.textSecondary,
+  },
+  calGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "flex-start",
+  },
+  calCell: {
+    width: "14.28%",
+    height: 33,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: BorderRadius.round,
+    marginVertical: 1.5,
+  },
+  calCellSelected: {
+    backgroundColor: Colors.primary,
+  },
+  calCellToday: {
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+  },
+  calCellText: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: Colors.textPrimary,
+  },
+  calCellTextSelected: {
+    color: Colors.white,
+    fontWeight: "700",
+  },
+  calCellTextToday: {
+    color: Colors.primary,
+    fontWeight: "700",
+  },
+  calCellTextInactive: {
+    color: "#BCC5CA",
+    opacity: 0.5,
+  },
+  calBottomActions: {
+    marginTop: Spacing.xs,
+    paddingTop: Spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: "#E9ECEF",
+    alignItems: "center",
+  },
+  quickTodayBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    backgroundColor: "#E8F4F5",
+    borderRadius: BorderRadius.round,
+  },
+  quickTodayText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: Colors.primary,
   },
 });
 

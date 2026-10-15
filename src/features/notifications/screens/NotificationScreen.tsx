@@ -140,9 +140,9 @@ export const NotificationScreen: React.FC = () => {
       >
         <View style={styles.responsiveWrapper}>
           {displayedNotifications.length > 0 ? (
-            displayedNotifications.map((item) => (
+            displayedNotifications.map((item, index) => (
               <NotificationCard
-                key={item.id}
+                key={`${item.id}-${index}`}
                 item={item}
                 onPress={() => handleCardPress(item)}
               />

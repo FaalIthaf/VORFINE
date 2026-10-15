@@ -19,6 +19,7 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { BorderRadius, Colors, Spacing } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
 import { TabType } from "@/types";
+import { MONTH_SHORT_ID } from "@/utils/dateUtils";
 
 export const FinanceScreen: React.FC = () => {
   const router = useRouter();
@@ -30,6 +31,10 @@ export const FinanceScreen: React.FC = () => {
   const [transType, setTransType] = useState<"income" | "expense">("income");
   const [transTitle, setTransTitle] = useState("");
   const [transAmount, setTransAmount] = useState("");
+  const [transDate, setTransDate] = useState<string>(() => {
+    const now = new Date();
+    return `${now.getDate()} ${MONTH_SHORT_ID[now.getMonth()]} ${now.getFullYear()}`;
+  });
 
   // 6. Budget Edit State (Daily, Monthly, and Annual)
   const [isEditingBudget, setIsEditingBudget] = useState(false);
@@ -106,17 +111,19 @@ export const FinanceScreen: React.FC = () => {
       note: transType === "income" ? "Pemasukan" : "Pengeluaran",
       amount: amountNum,
       type: transType,
+      date: transDate.trim() || undefined,
     });
 
     const formatted = formatRupiah(amountNum);
     const typeLabel = transType === "income" ? "Pemasukan" : "Pengeluaran";
+    const dateLabel = transDate.trim() || "hari ini";
 
     setTransTitle("");
     setTransAmount("");
 
     Alert.alert(
       "Transaksi Berhasil Disimpan",
-      `${typeLabel} sebesar ${formatted} berhasil dicatat dengan waktu sekarang dan disinkronkan ke riwayat Dashboard.`,
+      `${typeLabel} sebesar ${formatted} berhasil dicatat pada tanggal ${dateLabel} dan disinkronkan ke riwayat transaksi.`,
       [
         {
           text: "Lihat di Dashboard",
@@ -516,7 +523,102 @@ export const FinanceScreen: React.FC = () => {
             </Pressable>
           </View>
 
-          {/* Form Fields: Nominal (Rp) di atas, Deskripsi tepat di bawahnya */}
+          {/* Form Fields: Tanggal, Nominal, Deskripsi */}
+          <View style={styles.formGroup}>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: Spacing.xs,
+              }}
+            >
+              <Text style={styles.inputLabel}>Tanggal Transaksi</Text>
+              <Text style={{ fontSize: 11, color: "#8B9DA0" }}>
+                Format: DD MMM YYYY
+              </Text>
+            </View>
+            <TextInput
+              style={styles.formInput}
+              placeholder="Contoh: 28 Sep 2026"
+              placeholderTextColor="#98A2B3"
+              value={transDate}
+              onChangeText={setTransDate}
+            />
+            <View style={{ flexDirection: "row", gap: 8, marginTop: 6 }}>
+              <Pressable
+                style={{
+                  paddingVertical: 5,
+                  paddingHorizontal: 12,
+                  borderRadius: 14,
+                  backgroundColor: "#F0F4F5",
+                }}
+                onPress={() => {
+                  const now = new Date();
+                  setTransDate(
+                    `${now.getDate()} ${MONTH_SHORT_ID[now.getMonth()]} ${now.getFullYear()}`,
+                  );
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 11.5,
+                    color: Colors.primary,
+                    fontWeight: "600",
+                  }}
+                >
+                  Hari Ini
+                </Text>
+              </Pressable>
+              <Pressable
+                style={{
+                  paddingVertical: 5,
+                  paddingHorizontal: 12,
+                  borderRadius: 14,
+                  backgroundColor: "#F0F4F5",
+                }}
+                onPress={() => {
+                  const yesterday = new Date();
+                  yesterday.setDate(yesterday.getDate() - 1);
+                  setTransDate(
+                    `${yesterday.getDate()} ${MONTH_SHORT_ID[yesterday.getMonth()]} ${yesterday.getFullYear()}`,
+                  );
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 11.5,
+                    color: Colors.primary,
+                    fontWeight: "600",
+                  }}
+                >
+                  Kemarin
+                </Text>
+              </Pressable>
+              <Pressable
+                style={{
+                  paddingVertical: 5,
+                  paddingHorizontal: 12,
+                  borderRadius: 14,
+                  backgroundColor: "#F0F4F5",
+                }}
+                onPress={() => {
+                  setTransDate("28 Sep 2026");
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 11.5,
+                    color: Colors.primary,
+                    fontWeight: "600",
+                  }}
+                >
+                  28 Sep 2026
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+
           <View style={styles.formGroup}>
             <Text style={styles.inputLabel}>Nominal (Rp)</Text>
             <TextInput

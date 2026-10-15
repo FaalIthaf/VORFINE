@@ -22,6 +22,7 @@ import {
   sortSchedulesByTime,
   sortSchedulesChronologically,
 } from "../utils/scheduleUtils";
+import { parseTransactionDate } from "../utils/dateUtils";
 
 import { loadData, saveData, STORAGE_KEYS } from "../utils/storage";
 import { useAuth } from "@/features/auth";
@@ -203,11 +204,76 @@ useEffect(() => {
     const loadedFinance = await loadData(STORAGE_KEYS.FINANCE, {} as Record<string, FinanceData>);
     if (Object.keys(loadedFinance).length) setFinanceByProfile(loadedFinance);
     const loadedTx = await loadData(STORAGE_KEYS.TRANSACTIONS, {} as Record<string, TransactionItem[]>);
-    if (Object.keys(loadedTx).length) setTransactionsByProfile(loadedTx);
+    if (Object.keys(loadedTx).length) {
+      const seenTxIds = new Set<string>();
+      const sanitizedTx: Record<string, TransactionItem[]> = {};
+      let hasTxDuplicates = false;
+
+      for (const [profId, list] of Object.entries(loadedTx)) {
+        sanitizedTx[profId] = (list || []).map((tx, idx) => {
+          if (!tx.id || seenTxIds.has(tx.id)) {
+            hasTxDuplicates = true;
+            const uniqueId = `${tx.id || Date.now()}-${idx}-${Math.random().toString(36).substring(2, 7)}`;
+            seenTxIds.add(uniqueId);
+            return { ...tx, id: uniqueId };
+          }
+          seenTxIds.add(tx.id);
+          return tx;
+        });
+      }
+      if (hasTxDuplicates) {
+        saveData(STORAGE_KEYS.TRANSACTIONS, sanitizedTx);
+      }
+      setTransactionsByProfile(sanitizedTx);
+    }
+
     const loadedSched = await loadData(STORAGE_KEYS.SCHEDULES, {} as Record<string, ScheduleItem[]>);
-    if (Object.keys(loadedSched).length) setSchedulesByProfile(loadedSched);
+    if (Object.keys(loadedSched).length) {
+      const seenSchedIds = new Set<string>();
+      const sanitizedSched: Record<string, ScheduleItem[]> = {};
+      let hasSchedDuplicates = false;
+
+      for (const [profId, list] of Object.entries(loadedSched)) {
+        sanitizedSched[profId] = (list || []).map((sch, idx) => {
+          if (!sch.id || seenSchedIds.has(sch.id)) {
+            hasSchedDuplicates = true;
+            const uniqueId = `${sch.id || Date.now()}-${idx}-${Math.random().toString(36).substring(2, 7)}`;
+            seenSchedIds.add(uniqueId);
+            return { ...sch, id: uniqueId };
+          }
+          seenSchedIds.add(sch.id);
+          return sch;
+        });
+      }
+      if (hasSchedDuplicates) {
+        saveData(STORAGE_KEYS.SCHEDULES, sanitizedSched);
+      }
+      setSchedulesByProfile(sanitizedSched);
+    }
+
     const loadedNotifs = await loadData(STORAGE_KEYS.NOTIFICATIONS, {} as Record<string, NotificationItem[]>);
-    if (Object.keys(loadedNotifs).length) setNotificationsByProfile(loadedNotifs);
+    if (Object.keys(loadedNotifs).length) {
+      const seenNotifIds = new Set<string>();
+      const sanitizedNotifs: Record<string, NotificationItem[]> = {};
+      let hasNotifDuplicates = false;
+
+      for (const [profId, list] of Object.entries(loadedNotifs)) {
+        sanitizedNotifs[profId] = (list || []).map((notif, idx) => {
+          if (!notif.id || seenNotifIds.has(notif.id)) {
+            hasNotifDuplicates = true;
+            const uniqueId = `${notif.id || Date.now()}-${idx}-${Math.random().toString(36).substring(2, 7)}`;
+            seenNotifIds.add(uniqueId);
+            return { ...notif, id: uniqueId };
+          }
+          seenNotifIds.add(notif.id);
+          return notif;
+        });
+      }
+      if (hasNotifDuplicates) {
+        saveData(STORAGE_KEYS.NOTIFICATIONS, sanitizedNotifs);
+      }
+      setNotificationsByProfile(sanitizedNotifs);
+    }
   })();
 }, []);
 
@@ -477,17 +543,32 @@ useEffect(() => {
       rawDate?: string;
     }) => {
       const now = new Date();
-      const rawDate = item.rawDate || now.toISOString();
-      const timestamp = now.getTime();
-      const day = now.getDate();
-      const monthShort = INDONESIAN_MONTHS_SHORT[now.getMonth()];
-      const year = now.getFullYear();
-      const hours = formatPad(now.getHours());
-      const minutes = formatPad(now.getMinutes());
+      // Sinkronisasi tanggal: Jika user memasukkan tanggal (e.g. "28 Sep 2026") atau rawDate,
+      // kita parse dengan parseTransactionDate agar rawDate dan timestamp sesuai dengan tanggal transaksi tersebut.
+      let parsedDate = now;
+      if (item.date || item.rawDate) {
+        parsedDate = parseTransactionDate({
+          date: item.date,
+          rawDate: item.rawDate,
+        });
+      }
 
-      // Real-time Indonesian formatted date string e.g. "30 Sep 2026, 11:45 WIB"
-      const formattedDate =
-        item.date || `${day} ${monthShort} ${year}, ${hours}:${minutes} WIB`;
+      const rawDate = item.rawDate || parsedDate.toISOString();
+      const timestamp = parsedDate.getTime();
+      const day = parsedDate.getDate();
+      const monthShort = INDONESIAN_MONTHS_SHORT[parsedDate.getMonth()];
+      const year = parsedDate.getFullYear();
+      const hours = formatPad(parsedDate.getHours());
+      const minutes = formatPad(parsedDate.getMinutes());
+
+      // Format teks tanggal tampilan
+      let formattedDate = item.date;
+      if (!formattedDate) {
+        formattedDate = `${day} ${monthShort} ${year}, ${hours}:${minutes} WIB`;
+      } else if (!formattedDate.includes("WIB") && !formattedDate.includes(":")) {
+        // Jika hanya tanggal saja (misal: "28 Sep 2026"), tambahkan jam saat ini agar rapi
+        formattedDate = `${formattedDate}, ${formatPad(now.getHours())}:${formatPad(now.getMinutes())} WIB`;
+      }
 
       const currentFin =
         financeByProfile[selectedProfileId] || createDefaultFinanceData(INDONESIAN_MONTHS[new Date().getMonth()]);
@@ -564,7 +645,7 @@ useEffect(() => {
 
   // Schedule Actions
   const addSchedule = useCallback(
-    (item: Omit<ScheduleItem, "id" | "completed">) => {
+    (item: Omit<ScheduleItem, "id" | "completed"> & { id?: string }) => {
       const newItem: ScheduleItem = {
         ...item,
         id: item.id || `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,

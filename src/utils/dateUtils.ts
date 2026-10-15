@@ -30,25 +30,22 @@ export const MONTH_SHORT_ID = [
   "Des",
 ];
 
-export const parseTransactionDate = (item: TransactionItem): Date => {
-  if (item.timestamp) {
-    const d = new Date(item.timestamp);
-    if (!isNaN(d.getTime())) return d;
-  }
-  if (item.rawDate) {
-    const d = new Date(item.rawDate);
-    if (!isNaN(d.getTime())) return d;
-  }
+export const parseTransactionDate = (item: {
+  date?: string;
+  rawDate?: string;
+  timestamp?: number;
+}): Date => {
+  // 1. Prioritas TERTINGGI: Periksa teks item.date
+  // Karena ini adalah teks tanggal yang dilihat langsung oleh pengguna di kartu transaksi
   if (item.date) {
-    const d = new Date(item.date);
-    if (!isNaN(d.getTime())) return d;
-
-    // Parse format like "1 Sep 2026" or "29 Sep 2026, 23:15 WIB"
-    const match = item.date.match(/(\d+)\s+([A-Za-z]+)\s+(\d{4})/);
+    // Format: "28 Sep 2026", "28 September 2026", "28 Sep 2026, 14:00 WIB"
+    const match = item.date.match(/(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})(?:,\s*(\d{1,2}):(\d{1,2}))?/);
     if (match) {
       const day = parseInt(match[1], 10);
       const mStr = match[2].toLowerCase();
       const year = parseInt(match[3], 10);
+      const hours = match[4] ? parseInt(match[4], 10) : 0;
+      const minutes = match[5] ? parseInt(match[5], 10) : 0;
 
       const monthMap: Record<string, number> = {
         jan: 0,
@@ -81,10 +78,55 @@ export const parseTransactionDate = (item: TransactionItem): Date => {
         dec: 11,
       };
 
-      const monthIndex = monthMap[mStr] ?? 8;
-      return new Date(year, monthIndex, day);
+      if (monthMap[mStr] !== undefined) {
+        return new Date(year, monthMap[mStr], day, hours, minutes);
+      }
     }
+
+    // Format ISO YYYY-MM-DD
+    const isoMatch = item.date.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (isoMatch) {
+      return new Date(
+        parseInt(isoMatch[1], 10),
+        parseInt(isoMatch[2], 10) - 1,
+        parseInt(isoMatch[3], 10),
+      );
+    }
+
+    // Format DD/MM/YYYY
+    const slashMatch = item.date.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (slashMatch) {
+      return new Date(
+        parseInt(slashMatch[3], 10),
+        parseInt(slashMatch[2], 10) - 1,
+        parseInt(slashMatch[1], 10),
+      );
+    }
+
+    const d = new Date(item.date);
+    if (!isNaN(d.getTime())) return d;
   }
+
+  // 2. Periksa item.rawDate
+  if (item.rawDate) {
+    const isoMatch = item.rawDate.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (isoMatch) {
+      return new Date(
+        parseInt(isoMatch[1], 10),
+        parseInt(isoMatch[2], 10) - 1,
+        parseInt(isoMatch[3], 10),
+      );
+    }
+    const d = new Date(item.rawDate);
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  // 3. Periksa item.timestamp
+  if (item.timestamp) {
+    const d = new Date(item.timestamp);
+    if (!isNaN(d.getTime())) return d;
+  }
+
   return new Date();
 };
 

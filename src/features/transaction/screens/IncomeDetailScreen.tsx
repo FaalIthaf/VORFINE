@@ -29,6 +29,7 @@ import { useApp } from "@/context/AppContext";
 import { PeriodFilterMode } from "@/types";
 import {
   filterTransactionsByPeriod,
+  MONTH_SHORT_ID,
   parseAmountToNumber,
 } from "@/utils/dateUtils";
 
@@ -45,10 +46,15 @@ export const IncomeDetailScreen: React.FC = () => {
     label: string;
     period: string;
     options?: { year?: number; month?: number; day?: number };
-  }>({
-    label: "Bulan Ini",
-    period: "Sep 2026",
-    options: { year: 2026, month: 8 },
+  }>(() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = d.getMonth();
+    return {
+      label: "Bulan Ini",
+      period: `${MONTH_SHORT_ID[m]} ${y}`,
+      options: { year: y, month: m },
+    };
   });
 
   // Modal Tambah Pemasukan
@@ -56,6 +62,22 @@ export const IncomeDetailScreen: React.FC = () => {
   const [newTitle, setNewTitle] = useState<string>("");
   const [newAmount, setNewAmount] = useState<string>("");
   const [newNote, setNewNote] = useState<string>("");
+  const [newDate, setNewDate] = useState<string>("");
+
+  const openAddModal = () => {
+    let defaultDate = "";
+    if (filterMode === "day" && selectedPeriod.options?.day) {
+      const d = selectedPeriod.options.day;
+      const m = selectedPeriod.options.month ?? new Date().getMonth();
+      const y = selectedPeriod.options.year ?? new Date().getFullYear();
+      defaultDate = `${d} ${MONTH_SHORT_ID[m]} ${y}`;
+    } else {
+      const now = new Date();
+      defaultDate = `${now.getDate()} ${MONTH_SHORT_ID[now.getMonth()]} ${now.getFullYear()}`;
+    }
+    setNewDate(defaultDate);
+    setIsAddModalVisible(true);
+  };
 
   const showFeedback = (msg: string) => {
     if (Platform.OS === "android") {
@@ -157,15 +179,17 @@ export const IncomeDetailScreen: React.FC = () => {
       amount: amountNum,
       type: "income",
       note: newNote.trim() || undefined,
+      date: newDate.trim() || undefined,
     });
 
     setNewTitle("");
     setNewAmount("");
     setNewNote("");
+    setNewDate("");
     setIsAddModalVisible(false);
 
     showFeedback(
-      "Pemasukan baru berhasil disimpan dengan stempel waktu real-time!",
+      `Pemasukan baru berhasil disimpan pada tanggal ${newDate.trim() || "hari ini"}!`,
     );
   };
 
@@ -217,14 +241,22 @@ export const IncomeDetailScreen: React.FC = () => {
               <View style={styles.sectionBadge}>
                 <Text style={styles.sectionBadgeText}>Riwayat Transaksi</Text>
               </View>
+              <Pressable
+                style={styles.addBtnSmall}
+                onPress={openAddModal}
+                hitSlop={8}
+              >
+                <Ionicons name="add" size={16} color={Colors.white} />
+                <Text style={styles.addBtnSmallText}>Tambah</Text>
+              </Pressable>
             </View>
 
             {/* List Transaksi */}
             <View style={styles.itemsList}>
               {filteredTransactions.length > 0 ? (
-                filteredTransactions.map((item) => (
+                filteredTransactions.map((item, index) => (
                   <TransactionItemCard
-                    key={item.id}
+                    key={`${item.id}-${index}`}
                     title={item.title}
                     note={item.note}
                     date={item.date}
@@ -297,6 +329,31 @@ export const IncomeDetailScreen: React.FC = () => {
                 placeholderTextColor="#98A2B3"
                 value={newTitle}
                 onChangeText={setNewTitle}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 5,
+                }}
+              >
+                <Text style={[styles.inputLabel, { marginBottom: 0 }]}>
+                  Tanggal Transaksi
+                </Text>
+                <Text style={{ fontSize: 11, color: "#8B9DA0" }}>
+                  Format: DD MMM YYYY
+                </Text>
+              </View>
+              <TextInput
+                style={styles.inputField}
+                placeholder="Contoh: 28 Sep 2026"
+                placeholderTextColor="#98A2B3"
+                value={newDate}
+                onChangeText={setNewDate}
               />
             </View>
 

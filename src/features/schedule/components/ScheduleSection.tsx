@@ -74,11 +74,11 @@ export const ScheduleSection: React.FC<ScheduleSectionProps> = ({
           </View>
         ) : (
           <View style={styles.itemsList}>
-            {items.map((item) => {
+            {items.map((item, index) => {
               const catStyle = getCategoryStyles(item.category);
 
               return (
-                <View key={item.id} style={styles.itemCard}>
+                <View key={`${item.id}-${index}`} style={styles.itemCard}>
                   {/* Item Top: Time & Category */}
                   <View style={styles.itemTopRow}>
                     <Text style={styles.timeText}>{item.time}</Text>

@@ -4,7 +4,7 @@ import { BorderRadius, Colors, Spacing } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
 import { useAuth } from "@/features/auth";
 import { ProfileModal } from "@/features/profile";
-import { ScheduleSection } from "@/features/schedule";
+import { ScheduleSection } from "@/features/schedule/components/ScheduleSection";
 import { TransactionItemCard } from "@/features/transaction";
 import { TabType } from "@/types";
 import { parseAmountToNumber, parseTransactionDate } from "@/utils/dateUtils";
@@ -12,18 +12,18 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
-    Alert,
-    Modal,
-    Platform,
-    Pressable,
-    RefreshControl,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    ToastAndroid,
-    TouchableWithoutFeedback,
-    View,
+  Alert,
+  Modal,
+  Platform,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  ToastAndroid,
+  TouchableWithoutFeedback,
+  View,
 } from "react-native";
 import { BalanceCard } from "../components/BalanceCard";
 import { FinanceSummary } from "../components/FinanceSummary";
@@ -273,33 +273,34 @@ export const HomeScreen: React.FC = () => {
                   );
                 }}
                 hitSlop={8}
-              >
-                <Text style={styles.seeAllText}>Lihat Semua</Text>
-              </Pressable>
+              ></Pressable>
             </View>
 
             {/* List Transaksi Terbaru — deduplikasi ID sebelum render */}
             {transactions
-              .filter((item, idx, arr) => arr.findIndex((t) => t.id === item.id) === idx)
+              .filter(
+                (item, idx, arr) =>
+                  arr.findIndex((t) => t.id === item.id) === idx,
+              )
               .slice(0, 3)
-              .map((item) => (
-              <TransactionItemCard
-                key={item.id}
-                title={item.title}
-                note={item.note}
-                date={item.date}
-                amount={item.amount}
-                balance={item.balance}
-                type={item.type}
-                onPress={() => {
-                  if (item.type === "income") {
-                    router.push("/income" as any);
-                  } else {
-                    router.push("/expense" as any);
-                  }
-                }}
-              />
-            ))}
+              .map((item, index) => (
+                <TransactionItemCard
+                  key={`${item.id}-${index}`}
+                  title={item.title}
+                  note={item.note}
+                  date={item.date}
+                  amount={item.amount}
+                  balance={item.balance}
+                  type={item.type}
+                  onPress={() => {
+                    if (item.type === "income") {
+                      router.push("/income" as any);
+                    } else {
+                      router.push("/expense" as any);
+                    }
+                  }}
+                />
+              ))}
 
             {transactions.length === 0 && (
               <View style={styles.emptyTransCard}>
