@@ -48,6 +48,27 @@ export const clearAllData = async (): Promise<void> => {
   }
 };
 
+export const removeData = async (key: string): Promise<void> => {
+  try {
+    await AsyncStorage.removeItem(key);
+  } catch (e) {
+    console.warn("Failed to remove", key, e);
+  }
+};
+
+/**
+ * Scopes storage keys by user/account identifier to prevent data leakage across accounts.
+ * Example: getAccountStorageKey("vorfine_profiles", "usr_123") -> "vorfine_profiles_usr_123"
+ */
+export const getAccountStorageKey = (
+  baseKey: string,
+  userIdentifier?: string | null
+): string => {
+  if (!userIdentifier) return `${baseKey}_guest`;
+  const sanitized = userIdentifier.toLowerCase().replace(/[^a-z0-9_-]/g, "_");
+  return `${baseKey}_${sanitized}`;
+};
+
 // ─── Secure Storage (expo-secure-store) ──────────────────────────────
 // These functions encrypt sensitive data like session tokens and credentials.
 // On web, falls back to AsyncStorage (SecureStore is not available).
