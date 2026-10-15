@@ -197,10 +197,10 @@ useEffect(() => {
   const currentLiveMonthName = INDONESIAN_MONTHS[currentTime.getMonth()];
   const currentLiveDateStr = `${currentLiveDayName}, ${currentTime.getDate()} ${currentLiveMonthName} ${currentTime.getFullYear()}`;
 
-  // Date State for Calendar Navigation (default to September 2026 as per base design)
-  const [currentYear, setCurrentYear] = useState<number>(2026);
-  const [currentMonth, setCurrentMonth] = useState<number>(8); // 8 = September
-  const [selectedDay, setSelectedDayState] = useState<number>(18);
+  // Date State for Calendar Navigation (default to actual today's date)
+  const [currentYear, setCurrentYear] = useState<number>(() => new Date().getFullYear());
+  const [currentMonth, setCurrentMonth] = useState<number>(() => new Date().getMonth());
+  const [selectedDay, setSelectedDayState] = useState<number>(() => new Date().getDate());
 
   // Search query
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -209,10 +209,31 @@ useEffect(() => {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [selectedProfileId, setSelectedProfileId] = useState<string>("");
 
+<<<<<<< HEAD
   // Isolated State Partitioned by Profile ID
   const [financeByProfile, setFinanceByProfile] = useState<
     Record<string, FinanceData>
   >({});
+=======
+  // Dynamically sync profile 1 when active user profile changes
+  useEffect(() => {
+    if (user?.fullName) {
+      setProfiles((prev) =>
+        prev.map((p) => (p.id === "1" ? { ...p, name: user.fullName } : p))
+      );
+    }
+  }, [user?.fullName]);
+
+  // 9. Isolated State Partitioned by Profile ID
+  const _currentMonthName = INDONESIAN_MONTHS[new Date().getMonth()];
+  const [financeByProfile, setFinanceByProfile] = useState<
+    Record<string, FinanceData>
+  >({
+    "1": createDefaultFinanceData(_currentMonthName),
+    "2": createDefaultFinanceData(_currentMonthName),
+    "3": createDefaultFinanceData(_currentMonthName),
+  });
+>>>>>>> 7b50aba8645cd5b31a65108df4b04e28d726b5a1
 
   const [transactionsByProfile, setTransactionsByProfile] = useState<
     Record<string, TransactionItem[]>
@@ -315,7 +336,7 @@ useEffect(() => {
   }, [profiles, selectedProfileId, user?.fullName]);
 
   const activeFinanceData =
-    financeByProfile[selectedProfileId] || createDefaultFinanceData("September");
+    financeByProfile[selectedProfileId] || createDefaultFinanceData(INDONESIAN_MONTHS[new Date().getMonth()]);
 
   const activeTransactions = transactionsByProfile[selectedProfileId] || [];
 
@@ -511,7 +532,7 @@ useEffect(() => {
         item.date || `${day} ${monthShort} ${year}, ${hours}:${minutes} WIB`;
 
       const currentFin =
-        financeByProfile[selectedProfileId] || createDefaultFinanceData("September");
+        financeByProfile[selectedProfileId] || createDefaultFinanceData(INDONESIAN_MONTHS[new Date().getMonth()]);
 
       let updatedFin = { ...currentFin };
 
@@ -531,7 +552,7 @@ useEffect(() => {
       }));
 
       const newItem: TransactionItem = {
-        id: Date.now().toString(),
+        id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         title: item.title,
         note: item.note,
         date: formattedDate,
@@ -588,7 +609,7 @@ useEffect(() => {
     (item: Omit<ScheduleItem, "id" | "completed">) => {
       const newItem: ScheduleItem = {
         ...item,
-        id: Date.now().toString(),
+        id: item.id || `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         completed: false,
         dateKey: item.dateKey || selectedDateKey,
         profileId: selectedProfileId,
@@ -788,6 +809,7 @@ useEffect(() => {
         isCurrent: true,
       };
 
+<<<<<<< HEAD
       // Initialize clean isolated state for the new profile
       const newFinance = {
         ...financeByProfile,
@@ -805,6 +827,25 @@ useEffect(() => {
         ...notificationsByProfile,
         [newId]: [],
       };
+=======
+    // Initialize clean isolated state for the new profile
+    const newFinance = {
+      ...financeByProfile,
+      [newId]: createDefaultFinanceData(INDONESIAN_MONTHS[new Date().getMonth()]),
+    };
+    const newTx = {
+      ...transactionsByProfile,
+      [newId]: [],
+    };
+    const newSched = {
+      ...schedulesByProfile,
+      [newId]: [],
+    };
+    const newNotif = {
+      ...notificationsByProfile,
+      [newId]: [],
+    };
+>>>>>>> 7b50aba8645cd5b31a65108df4b04e28d726b5a1
 
       setFinanceByProfile(newFinance);
       setTransactionsByProfile(newTx);

@@ -1,21 +1,21 @@
+import { BorderRadius, Colors, Spacing } from "@/constants/theme";
+import { ScheduleCategory, ScheduleItem } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
-  Alert,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableWithoutFeedback,
-  View,
+    Alert,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableWithoutFeedback,
+    View,
 } from "react-native";
-import { BorderRadius, Colors, Spacing } from "@/constants/theme";
-import { ScheduleCategory, ScheduleItem } from "@/types";
 import { TimeWheelPicker } from "./TimeWheelPicker";
 
 interface AddScheduleModalProps {
@@ -150,10 +150,8 @@ export const AddScheduleModal: React.FC<AddScheduleModalProps> = ({
                     />
                   </View>
 
-                  {/* Field 2: Pengaturan Waktu */}
                   <View style={styles.fieldGroup}>
                     <View style={styles.timeSettingsRow}>
-                      {/* Waktu Mulai */}
                       <View style={styles.timeCardCol}>
                         <Text style={styles.fieldSubLabel}>Waktu Mulai</Text>
                         <Pressable
@@ -182,7 +180,6 @@ export const AddScheduleModal: React.FC<AddScheduleModalProps> = ({
                         </Pressable>
                       </View>
 
-                      {/* Waktu Selesai */}
                       <View style={styles.timeCardCol}>
                         <Text style={styles.fieldSubLabel}>Waktu Selesai</Text>
                         <Pressable

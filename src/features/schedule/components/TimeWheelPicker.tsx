@@ -1,30 +1,30 @@
+import { BorderRadius, Colors, Spacing } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useRef, useState } from "react";
 import {
-  NativeScrollEvent,
-  NativeSyntheticEvent,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    NativeScrollEvent,
+    NativeSyntheticEvent,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
-import { BorderRadius, Colors, Spacing } from "@/constants/theme";
 
 interface TimeWheelPickerProps {
   visible: boolean;
   title: string;
-  initialTime?: string; // e.g. "08.00 WIB" or "08:00"
-  minTime?: string; // Minimum allowable time e.g. "08.00 WIB"
+  initialTime?: string;
+  minTime?: string;
   onClose: () => void;
   onConfirm: (formattedTime: string) => void;
 }
 
 const ITEM_HEIGHT = 44;
 const VISIBLE_ITEMS = 5;
-const CONTAINER_HEIGHT = ITEM_HEIGHT * VISIBLE_ITEMS; // 220px
-const PADDING_VERTICAL = ITEM_HEIGHT * 2; // 88px
+const CONTAINER_HEIGHT = ITEM_HEIGHT * VISIBLE_ITEMS;
+const PADDING_VERTICAL = ITEM_HEIGHT * 2;
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const MINUTES = Array.from({ length: 60 }, (_, i) => i);
@@ -281,12 +281,17 @@ export const TimeWheelPicker: React.FC<TimeWheelPickerProps> = ({
                 {HOURS.map((hour) => {
                   const isSelected = hour === selectedHour;
                   const distance = Math.abs(hour - selectedHour);
-                  const isDisabled = Boolean(minParsed && hour < minParsed.hour);
+                  const isDisabled = Boolean(
+                    minParsed && hour < minParsed.hour,
+                  );
 
                   return (
                     <Pressable
                       key={hour}
-                      style={[styles.wheelItem, isDisabled && { opacity: 0.25 }]}
+                      style={[
+                        styles.wheelItem,
+                        isDisabled && { opacity: 0.25 },
+                      ]}
                       onPress={() => !isDisabled && scrollToHour(hour)}
                       disabled={isDisabled}
                     >
@@ -354,14 +359,17 @@ export const TimeWheelPicker: React.FC<TimeWheelPickerProps> = ({
                   const distance = Math.abs(minute - selectedMinute);
                   const isDisabled = Boolean(
                     minParsed &&
-                      selectedHour === minParsed.hour &&
-                      minute < minParsed.minute,
+                    selectedHour === minParsed.hour &&
+                    minute < minParsed.minute,
                   );
 
                   return (
                     <Pressable
                       key={minute}
-                      style={[styles.wheelItem, isDisabled && { opacity: 0.25 }]}
+                      style={[
+                        styles.wheelItem,
+                        isDisabled && { opacity: 0.25 },
+                      ]}
                       onPress={() => !isDisabled && scrollToMinute(minute)}
                       disabled={isDisabled}
                     >
@@ -400,8 +408,8 @@ export const TimeWheelPicker: React.FC<TimeWheelPickerProps> = ({
               const isActive = selectedMinute === m;
               const isDisabled = Boolean(
                 minParsed &&
-                  selectedHour === minParsed.hour &&
-                  m < minParsed.minute,
+                selectedHour === minParsed.hour &&
+                m < minParsed.minute,
               );
               return (
                 <Pressable
