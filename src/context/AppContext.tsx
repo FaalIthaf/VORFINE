@@ -186,105 +186,6 @@ useEffect(() => {
 }, []);
 
 
-<<<<<<< HEAD
-// 3. Load persisted state from AsyncStorage on app start
-useEffect(() => {
-  (async () => {
-    const loadedProfiles = await loadData(STORAGE_KEYS.PROFILES, [] as Profile[]);
-    if (loadedProfiles.length) {
-      if (user?.fullName) {
-        setProfiles(
-          loadedProfiles.map((p) =>
-            p.id === "1" ? { ...p, name: user.fullName } : p
-          )
-        );
-      } else {
-        setProfiles(loadedProfiles);
-      }
-    }
-    const loadedSelected = await loadData(STORAGE_KEYS.SELECTED_PROFILE, "1");
-    setSelectedProfileId(loadedSelected);
-    const loadedFinance = await loadData(STORAGE_KEYS.FINANCE, {} as Record<string, FinanceData>);
-    if (Object.keys(loadedFinance).length) setFinanceByProfile(loadedFinance);
-    const loadedTx = await loadData(STORAGE_KEYS.TRANSACTIONS, {} as Record<string, TransactionItem[]>);
-    if (Object.keys(loadedTx).length) {
-      const seenTxIds = new Set<string>();
-      const sanitizedTx: Record<string, TransactionItem[]> = {};
-      let hasTxDuplicates = false;
-
-      for (const [profId, list] of Object.entries(loadedTx)) {
-        sanitizedTx[profId] = (list || []).map((tx, idx) => {
-          if (!tx.id || seenTxIds.has(tx.id)) {
-            hasTxDuplicates = true;
-            const uniqueId = `${tx.id || Date.now()}-${idx}-${Math.random().toString(36).substring(2, 7)}`;
-            seenTxIds.add(uniqueId);
-            return { ...tx, id: uniqueId };
-          }
-          seenTxIds.add(tx.id);
-          return tx;
-        });
-      }
-      if (hasTxDuplicates) {
-        saveData(STORAGE_KEYS.TRANSACTIONS, sanitizedTx);
-      }
-      setTransactionsByProfile(sanitizedTx);
-    }
-
-    const loadedSched = await loadData(STORAGE_KEYS.SCHEDULES, {} as Record<string, ScheduleItem[]>);
-    if (Object.keys(loadedSched).length) {
-      const seenSchedIds = new Set<string>();
-      const sanitizedSched: Record<string, ScheduleItem[]> = {};
-      let hasSchedDuplicates = false;
-
-      for (const [profId, list] of Object.entries(loadedSched)) {
-        sanitizedSched[profId] = (list || []).map((sch, idx) => {
-          if (!sch.id || seenSchedIds.has(sch.id)) {
-            hasSchedDuplicates = true;
-            const uniqueId = `${sch.id || Date.now()}-${idx}-${Math.random().toString(36).substring(2, 7)}`;
-            seenSchedIds.add(uniqueId);
-            return { ...sch, id: uniqueId };
-          }
-          seenSchedIds.add(sch.id);
-          return sch;
-        });
-      }
-      if (hasSchedDuplicates) {
-        saveData(STORAGE_KEYS.SCHEDULES, sanitizedSched);
-      }
-      setSchedulesByProfile(sanitizedSched);
-    }
-
-    const loadedNotifs = await loadData(STORAGE_KEYS.NOTIFICATIONS, {} as Record<string, NotificationItem[]>);
-    if (Object.keys(loadedNotifs).length) {
-      const seenNotifIds = new Set<string>();
-      const sanitizedNotifs: Record<string, NotificationItem[]> = {};
-      let hasNotifDuplicates = false;
-
-      for (const [profId, list] of Object.entries(loadedNotifs)) {
-        sanitizedNotifs[profId] = (list || []).map((notif, idx) => {
-          if (!notif.id || seenNotifIds.has(notif.id)) {
-            hasNotifDuplicates = true;
-            const uniqueId = `${notif.id || Date.now()}-${idx}-${Math.random().toString(36).substring(2, 7)}`;
-            seenNotifIds.add(uniqueId);
-            return { ...notif, id: uniqueId };
-          }
-          seenNotifIds.add(notif.id);
-          return notif;
-        });
-      }
-      if (hasNotifDuplicates) {
-        saveData(STORAGE_KEYS.NOTIFICATIONS, sanitizedNotifs);
-      }
-      setNotificationsByProfile(sanitizedNotifs);
-    }
-  })();
-}, []);
-
-
-
-
-=======
->>>>>>> 5f72ecd27a42e85119ce5c899b527dbc60dec11a
   const formatPad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
 
   // Derived real-time Indonesian date/time strings
@@ -309,12 +210,6 @@ useEffect(() => {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [selectedProfileId, setSelectedProfileId] = useState<string>("");
 
-<<<<<<< HEAD
-  // Isolated State Partitioned by Profile ID
-  const [financeByProfile, setFinanceByProfile] = useState<
-    Record<string, FinanceData>
-  >({});
-=======
   // Dynamically sync profile 1 when active user profile changes
   useEffect(() => {
     if (user?.fullName) {
@@ -324,16 +219,10 @@ useEffect(() => {
     }
   }, [user?.fullName]);
 
-  // 9. Isolated State Partitioned by Profile ID
-  const _currentMonthName = INDONESIAN_MONTHS[new Date().getMonth()];
+  // Isolated State Partitioned by Profile ID
   const [financeByProfile, setFinanceByProfile] = useState<
     Record<string, FinanceData>
-  >({
-    "1": createDefaultFinanceData(_currentMonthName),
-    "2": createDefaultFinanceData(_currentMonthName),
-    "3": createDefaultFinanceData(_currentMonthName),
-  });
->>>>>>> 7b50aba8645cd5b31a65108df4b04e28d726b5a1
+  >({});
 
   const [transactionsByProfile, setTransactionsByProfile] = useState<
     Record<string, TransactionItem[]>
@@ -924,11 +813,10 @@ useEffect(() => {
         isCurrent: true,
       };
 
-<<<<<<< HEAD
       // Initialize clean isolated state for the new profile
       const newFinance = {
         ...financeByProfile,
-        [newId]: createDefaultFinanceData("September"),
+        [newId]: createDefaultFinanceData(INDONESIAN_MONTHS[new Date().getMonth()]),
       };
       const newTx = {
         ...transactionsByProfile,
@@ -942,25 +830,6 @@ useEffect(() => {
         ...notificationsByProfile,
         [newId]: [],
       };
-=======
-    // Initialize clean isolated state for the new profile
-    const newFinance = {
-      ...financeByProfile,
-      [newId]: createDefaultFinanceData(INDONESIAN_MONTHS[new Date().getMonth()]),
-    };
-    const newTx = {
-      ...transactionsByProfile,
-      [newId]: [],
-    };
-    const newSched = {
-      ...schedulesByProfile,
-      [newId]: [],
-    };
-    const newNotif = {
-      ...notificationsByProfile,
-      [newId]: [],
-    };
->>>>>>> 7b50aba8645cd5b31a65108df4b04e28d726b5a1
 
       setFinanceByProfile(newFinance);
       setTransactionsByProfile(newTx);

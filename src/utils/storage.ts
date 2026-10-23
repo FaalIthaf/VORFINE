@@ -20,46 +20,145 @@ export const SECURE_KEYS = {
   REGISTERED_USERS: "vorfine_registered_users",
 };
 
-// ─── Regular Storage (AsyncStorage) ──────────────────────────────────
+// In-memory fallback cache ensures data integrity across components even if native storage drivers fail
+const memoryStore = new Map<string, string>();
+
+const isWeb = Platform.OS === "web";
+
+const getWebStorage = (): Storage | null => {
+  if (typeof window !== "undefined" && window.localStorage) {
+    return window.localStorage;
+  }
+  return null;
+};
+
+// ─── Regular Storage (AsyncStorage with Web localStorage & Memory Fallback) ──
 export const saveData = async (key: string, value: any): Promise<void> => {
   try {
     const json = JSON.stringify(value);
-    await AsyncStorage.setItem(key, json);
+    memoryStore.set(key, json);
+
+    if (isWeb) {
+      try {
+        getWebStorage()?.setItem(key, json);
+      } catch {
+        // web storage quota or privacy mode error
+      }
+      return;
+    }
+
+    // Try AsyncStorage on native
+    try {
+      await AsyncStorage.setItem(key, json);
+      return;
+    } catch {
+      // If AsyncStorage native module is null or fails, try SecureStore as fallback if small
+      if (json.length < 2000) {
+        try {
+          if (await SecureStore.isAvailableAsync()) {
+            await SecureStore.setItemAsync(`_fb_${key}`, json);
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }
   } catch (e) {
-    console.warn("Failed to save", key, e);
+    // Memory store holds it safely
   }
 };
 
 export const loadData = async <T>(key: string, fallback: T): Promise<T> => {
   try {
-    const json = await AsyncStorage.getItem(key);
-    return json != null ? (JSON.parse(json) as T) : fallback;
-  } catch (e) {
-    console.warn("Failed to load", key, e);
+    if (isWeb) {
+      try {
+        const webVal = getWebStorage()?.getItem(key);
+        if (webVal != null) {
+          memoryStore.set(key, webVal);
+          return JSON.parse(webVal) as T;
+        }
+      } catch {
+        // ignore
+      }
+      const mem = memoryStore.get(key);
+      return mem != null ? (JSON.parse(mem) as T) : fallback;
+    }
+
+    // Native: Try AsyncStorage
+    try {
+      const json = await AsyncStorage.getItem(key);
+      if (json != null) {
+        memoryStore.set(key, json);
+        return JSON.parse(json) as T;
+      }
+    } catch {
+      // Fallback: check SecureStore fallback
+      try {
+        if (await SecureStore.isAvailableAsync()) {
+          const fb = await SecureStore.getItemAsync(`_fb_${key}`);
+          if (fb != null) {
+            memoryStore.set(key, fb);
+            return JSON.parse(fb) as T;
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    const mem = memoryStore.get(key);
+    if (mem != null) {
+      return JSON.parse(mem) as T;
+    }
+    return fallback;
+  } catch {
     return fallback;
   }
 };
 
 export const clearAllData = async (): Promise<void> => {
+  memoryStore.clear();
+  if (isWeb) {
+    try {
+      getWebStorage()?.clear();
+    } catch {
+      // ignore
+    }
+    return;
+  }
+
   try {
     await AsyncStorage.clear();
-  } catch (e) {
-    console.warn("Failed to clear storage", e);
+  } catch {
+    // ignore
   }
 };
 
 export const removeData = async (key: string): Promise<void> => {
+  memoryStore.delete(key);
+  if (isWeb) {
+    try {
+      getWebStorage()?.removeItem(key);
+    } catch {
+      // ignore
+    }
+    return;
+  }
+
   try {
     await AsyncStorage.removeItem(key);
-  } catch (e) {
-    console.warn("Failed to remove", key, e);
+  } catch {
+    // ignore
+  }
+  try {
+    if (await SecureStore.isAvailableAsync()) {
+      await SecureStore.deleteItemAsync(`_fb_${key}`);
+    }
+  } catch {
+    // ignore
   }
 };
 
-/**
- * Scopes storage keys by user/account identifier to prevent data leakage across accounts.
- * Example: getAccountStorageKey("vorfine_profiles", "usr_123") -> "vorfine_profiles_usr_123"
- */
 export const getAccountStorageKey = (
   baseKey: string,
   userIdentifier?: string | null
@@ -69,51 +168,119 @@ export const getAccountStorageKey = (
   return `${baseKey}_${sanitized}`;
 };
 
-// ─── Secure Storage (expo-secure-store) ──────────────────────────────
-// These functions encrypt sensitive data like session tokens and credentials.
-// On web, falls back to AsyncStorage (SecureStore is not available).
-
-const isSecureStoreAvailable = Platform.OS !== "web";
-
+// ─── Secure Storage (expo-secure-store on Native, localStorage on Web) ──
 export const saveSecure = async (key: string, value: string): Promise<void> => {
   try {
-    if (isSecureStoreAvailable) {
+    memoryStore.set(`__sec_${key}`, value);
+    if (isWeb) {
+      try {
+        getWebStorage()?.setItem(`__sec_${key}`, value);
+      } catch {
+        // ignore
+      }
+      return;
+    }
+
+    let secureAvailable = false;
+    try {
+      secureAvailable = await SecureStore.isAvailableAsync();
+    } catch {
+      secureAvailable = false;
+    }
+
+    if (secureAvailable) {
       await SecureStore.setItemAsync(key, value);
     } else {
-      // Web fallback
-      await AsyncStorage.setItem(`__secure_${key}`, value);
+      try {
+        await AsyncStorage.setItem(`__sec_${key}`, value);
+      } catch {
+        // memoryStore holds it
+      }
     }
-  } catch (e) {
-    console.warn("Failed to save secure data", key, e);
+  } catch {
+    // memoryStore holds it
   }
 };
 
 export const loadSecure = async (key: string): Promise<string | null> => {
   try {
-    if (isSecureStoreAvailable) {
-      return await SecureStore.getItemAsync(key);
-    } else {
-      return await AsyncStorage.getItem(`__secure_${key}`);
+    if (isWeb) {
+      try {
+        const webVal = getWebStorage()?.getItem(`__sec_${key}`);
+        if (webVal != null) {
+          memoryStore.set(`__sec_${key}`, webVal);
+          return webVal;
+        }
+      } catch {
+        // ignore
+      }
+      return memoryStore.get(`__sec_${key}`) || null;
     }
-  } catch (e) {
-    console.warn("Failed to load secure data", key, e);
-    return null;
+
+    let secureAvailable = false;
+    try {
+      secureAvailable = await SecureStore.isAvailableAsync();
+    } catch {
+      secureAvailable = false;
+    }
+
+    if (secureAvailable) {
+      const val = await SecureStore.getItemAsync(key);
+      if (val != null) {
+        memoryStore.set(`__sec_${key}`, val);
+        return val;
+      }
+    }
+
+    try {
+      const asyncVal = await AsyncStorage.getItem(`__sec_${key}`);
+      if (asyncVal != null) {
+        memoryStore.set(`__sec_${key}`, asyncVal);
+        return asyncVal;
+      }
+    } catch {
+      // ignore
+    }
+
+    return memoryStore.get(`__sec_${key}`) || null;
+  } catch {
+    return memoryStore.get(`__sec_${key}`) || null;
   }
 };
 
 export const deleteSecure = async (key: string): Promise<void> => {
   try {
-    if (isSecureStoreAvailable) {
-      await SecureStore.deleteItemAsync(key);
-    } else {
-      await AsyncStorage.removeItem(`__secure_${key}`);
+    memoryStore.delete(`__sec_${key}`);
+    if (isWeb) {
+      try {
+        getWebStorage()?.removeItem(`__sec_${key}`);
+      } catch {
+        // ignore
+      }
+      return;
     }
-  } catch (e) {
-    console.warn("Failed to delete secure data", key, e);
+
+    let secureAvailable = false;
+    try {
+      secureAvailable = await SecureStore.isAvailableAsync();
+    } catch {
+      secureAvailable = false;
+    }
+
+    if (secureAvailable) {
+      await SecureStore.deleteItemAsync(key);
+    }
+
+    try {
+      await AsyncStorage.removeItem(`__sec_${key}`);
+    } catch {
+      // ignore
+    }
+  } catch {
+    // ignore
   }
 };
 
-// ─── Convenience helpers for JSON objects in SecureStore ─────────────
 export const saveSecureJSON = async (key: string, value: any): Promise<void> => {
   await saveSecure(key, JSON.stringify(value));
 };
