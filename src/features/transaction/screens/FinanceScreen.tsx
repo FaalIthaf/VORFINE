@@ -1,3 +1,9 @@
+import { BottomNavBar } from "@/components/BottomNavBar";
+import { BrandLogo } from "@/components/BrandLogo";
+import { BorderRadius, Colors, Spacing } from "@/constants/theme";
+import { useApp } from "@/context/AppContext";
+import { TabType } from "@/types";
+import { MONTH_SHORT_ID } from "@/utils/dateUtils";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -14,12 +20,6 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { BottomNavBar } from "@/components/BottomNavBar";
-import { BrandLogo } from "@/components/BrandLogo";
-import { BorderRadius, Colors, Spacing } from "@/constants/theme";
-import { useApp } from "@/context/AppContext";
-import { TabType } from "@/types";
-import { MONTH_SHORT_ID } from "@/utils/dateUtils";
 
 export const FinanceScreen: React.FC = () => {
   const router = useRouter();
@@ -64,7 +64,9 @@ export const FinanceScreen: React.FC = () => {
   const dailySpent = financeData.dailyExpense;
   const dailyLimit = financeData.dailyBudget;
   const dailyPercentage =
-    dailyLimit > 0 ? Math.min(Math.round((dailySpent / dailyLimit) * 100), 100) : 0;
+    dailyLimit > 0
+      ? Math.min(Math.round((dailySpent / dailyLimit) * 100), 100)
+      : 0;
   const isDailyOver = dailyLimit > 0 && dailySpent >= dailyLimit;
   const isDailyNear =
     dailyLimit > 0 && dailySpent >= dailyLimit * 0.8 && !isDailyOver;
@@ -178,10 +180,7 @@ export const FinanceScreen: React.FC = () => {
 
       {/* 8. Header with Responsive Safe Area & Synchronized Symmetrical BrandLogo */}
       <View
-        style={[
-          styles.header,
-          { paddingTop: Math.max(insets.top, 12) + 8 },
-        ]}
+        style={[styles.header, { paddingTop: Math.max(insets.top, 12) + 8 }]}
       >
         <Pressable
           style={styles.backButton}
@@ -535,7 +534,7 @@ export const FinanceScreen: React.FC = () => {
             >
               <Text style={styles.inputLabel}>Tanggal Transaksi</Text>
               <Text style={{ fontSize: 11, color: "#8B9DA0" }}>
-                Format: DD MMM YYYY
+                Format: Tanggal Bulan Tahun
               </Text>
             </View>
             <TextInput

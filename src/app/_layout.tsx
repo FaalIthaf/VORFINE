@@ -70,7 +70,24 @@ export default function RootLayout() {
                 animation: "none",
                 contentStyle: { backgroundColor: "#F8F9FA" },
               }}
-            />
+            >
+              {/* Dashboard / Beranda Utama */}
+              <Stack.Screen name="index" options={{ title: "Beranda" }} />
+
+              {/* Fitur Utama */}
+              <Stack.Screen name="finance" options={{ title: "Keuangan" }} />
+              <Stack.Screen name="schedule" options={{ title: "Jadwal" }} />
+              <Stack.Screen name="expense" options={{ title: "Detail Pengeluaran" }} />
+              <Stack.Screen name="income" options={{ title: "Detail Pemasukan" }} />
+              <Stack.Screen name="notifications" options={{ title: "Notifikasi" }} />
+              <Stack.Screen name="info" options={{ title: "Informasi Aplikasi" }} />
+
+              {/* Autentikasi */}
+              <Stack.Screen name="auth/login" options={{ title: "Masuk Akun" }} />
+              <Stack.Screen name="auth/register" options={{ title: "Daftar Akun" }} />
+              <Stack.Screen name="auth/fingerprint" options={{ title: "Verifikasi Sidik Jari" }} />
+              <Stack.Screen name="auth/face-id" options={{ title: "Verifikasi Face ID" }} />
+            </Stack>
           </AuthGuard>
         </AppProvider>
       </AuthProvider>

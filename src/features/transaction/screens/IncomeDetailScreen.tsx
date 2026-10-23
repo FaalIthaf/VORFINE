@@ -1,3 +1,16 @@
+import {
+  BorderRadius,
+  Colors,
+  MaxContentWidth,
+  Spacing,
+} from "@/constants/theme";
+import { useApp } from "@/context/AppContext";
+import { PeriodFilterMode } from "@/types";
+import {
+  filterTransactionsByPeriod,
+  MONTH_SHORT_ID,
+  parseAmountToNumber,
+} from "@/utils/dateUtils";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
@@ -19,19 +32,6 @@ import { DetailHeader } from "../components/DetailHeader";
 import { DetailSummaryCard } from "../components/DetailSummaryCard";
 import { PeriodFilter } from "../components/PeriodFilter";
 import { TransactionItemCard } from "../components/TransactionItemCard";
-import {
-  BorderRadius,
-  Colors,
-  MaxContentWidth,
-  Spacing,
-} from "@/constants/theme";
-import { useApp } from "@/context/AppContext";
-import { PeriodFilterMode } from "@/types";
-import {
-  filterTransactionsByPeriod,
-  MONTH_SHORT_ID,
-  parseAmountToNumber,
-} from "@/utils/dateUtils";
 
 export const IncomeDetailScreen: React.FC = () => {
   const router = useRouter();
@@ -345,7 +345,7 @@ export const IncomeDetailScreen: React.FC = () => {
                   Tanggal Transaksi
                 </Text>
                 <Text style={{ fontSize: 11, color: "#8B9DA0" }}>
-                  Format: DD MMM YYYY
+                  Format: Tanggal Bulan Tahun
                 </Text>
               </View>
               <TextInput
