@@ -30,7 +30,7 @@ import { BalanceCard } from "../components/BalanceCard";
 import { FinanceSummary } from "../components/FinanceSummary";
 import { InfoScreen } from "./InfoScreen";
 import { apiService } from "@/services";
-import { ProgramDTO, TransactionDTO } from "@/models";
+import { TransactionDTO } from "@/models";
 
 export const HomeScreen: React.FC = () => {
   const router = useRouter();
@@ -73,8 +73,7 @@ export const HomeScreen: React.FC = () => {
   // Task 3: State penampung data dinamis dari REST API (DTO)
   // ─────────────────────────────────────────────────────────────
   const [apiTransactions, setApiTransactions] = useState<TransactionDTO[]>([]);
-  const [apiPrograms, setApiPrograms] = useState<ProgramDTO[]>([]);
-  const [isLoadingApi, setIsLoadingApi] = useState<boolean>(true);
+    const [isLoadingApi, setIsLoadingApi] = useState<boolean>(true);
 
   // Helper format mata uang Rupiah
   const formatRupiah = (val: number | string): string => {
@@ -94,11 +93,8 @@ export const HomeScreen: React.FC = () => {
       try {
         setIsLoadingApi(true);
 
-        // 1. Panggil fungsi REST API (Task 2)
-        const [rawTransactions, rawPrograms] = await Promise.all([
-          apiService.fetchTransactions().catch(() => []),
-          apiService.fetchPrograms().catch(() => []),
-        ]);
+        // 1. Panggil fungsi REST API transaksi VORFÍNE (Task 2)
+        const rawTransactions = await apiService.fetchTransactions().catch(() => []);
 
         if (!isMounted) return;
 
@@ -117,20 +113,7 @@ export const HomeScreen: React.FC = () => {
           })
         );
 
-        const mappedPrograms: ProgramDTO[] = rawPrograms.map((item: any) => ({
-          id: String(item.id),
-          name: item.name || item.title || "Program VORFÍNE",
-          description: item.description || "",
-          category: item.category || "budget",
-          status: item.status || "active",
-          targetAmount: item.targetAmount || 0,
-          currentAmount: item.currentAmount || 0,
-          startDate: item.startDate || new Date().toISOString().split("T")[0],
-          progress: item.progress || 0,
-        }));
-
         setApiTransactions(mappedTransactions);
-        setApiPrograms(mappedPrograms);
       } catch (error) {
         console.error("Gagal memuat data API pada Dashboard:", error);
       } finally {
@@ -163,10 +146,7 @@ export const HomeScreen: React.FC = () => {
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
     try {
-      const [rawTransactions, rawPrograms] = await Promise.all([
-        apiService.fetchTransactions().catch(() => []),
-        apiService.fetchPrograms().catch(() => []),
-      ]);
+      const rawTransactions = await apiService.fetchTransactions().catch(() => []);
 
       const mappedTransactions: TransactionDTO[] = rawTransactions.map(
         (item: any) => ({
@@ -182,21 +162,8 @@ export const HomeScreen: React.FC = () => {
         })
       );
 
-      const mappedPrograms: ProgramDTO[] = rawPrograms.map((item: any) => ({
-        id: String(item.id),
-        name: item.name || item.title || "Program VORFÍNE",
-        description: item.description || "",
-        category: item.category || "budget",
-        status: item.status || "active",
-        targetAmount: item.targetAmount || 0,
-        currentAmount: item.currentAmount || 0,
-        startDate: item.startDate || new Date().toISOString().split("T")[0],
-        progress: item.progress || 0,
-      }));
-
       setApiTransactions(mappedTransactions);
-      setApiPrograms(mappedPrograms);
-      showFeedback("Data VORFÍNE berhasil diperbarui dari server");
+      showFeedback("Data transaksi VORFÍNE berhasil diperbarui");
     } catch {
       showFeedback("Data VORFÍNE berhasil diperbarui");
     } finally {
@@ -213,9 +180,15 @@ export const HomeScreen: React.FC = () => {
     }
   };
 
-  // 3. Mapping data dinamis DTO ke format tampilan kartu transaksi
+  // 3. Mapping data transaksi murni keuangan pribadi VORFÍNE
   const displayTransactions = useMemo(() => {
-    const formattedApiItems = apiTransactions.map((t) => ({
+    // Jika user sudah memiliki catatan transaksi pribadi, tampilkan transaksi user
+    if (transactions.length > 0) {
+      return transactions;
+    }
+
+    // Jika belum ada data transaksi user, tampilkan data dinamis dari REST API VORFÍNE (Task 3)
+    return apiTransactions.map((t) => ({
       id: `api-${t.id}`,
       title: t.title,
       note: t.description || t.category,
@@ -227,11 +200,6 @@ export const HomeScreen: React.FC = () => {
       rawDate: t.date,
       timestamp: new Date(t.date).getTime() || Date.now(),
     }));
-
-    const combined = [...transactions, ...formattedApiItems];
-    return combined.filter(
-      (item, idx, arr) => arr.findIndex((t) => t.id === item.id) === idx
-    );
   }, [transactions, apiTransactions]);
 
   // 5. Multi-Period calculations for Harian, Bulanan, and Tahunan
@@ -377,56 +345,7 @@ export const HomeScreen: React.FC = () => {
             onPressExpense={() => router.push("/expense" as any)}
           />
 
-          {/* Section Program & Rencana Anggaran (Data Dinamis ProgramDTO dari API) */}
-            {apiPrograms.length > 0 && (
-              <View style={styles.programSectionContainer}>
-                <View style={styles.sectionHeaderRow}>
-                  <View style={styles.sectionTitleWithBadge}>
-                    <Text style={styles.sectionTitle}>Program & Anggaran</Text>
-                    <View style={[styles.transCountBadge, { backgroundColor: Colors.primary }]}>
-                      <Text style={styles.transCountText}>{apiPrograms.length}</Text>
-                    </View>
-                  </View>
-                </View>
-
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.programScrollContent}
-                >
-                  {apiPrograms.slice(0, 5).map((prog) => (
-                    <View key={prog.id} style={styles.programCard}>
-                      <View style={styles.programCardTop}>
-                        <View style={styles.programBadge}>
-                          <Text style={styles.programBadgeText}>
-                            {prog.category.toUpperCase()}
-                          </Text>
-                        </View>
-                        <Text style={styles.programStatusBadge}>
-                          {prog.status === "active" ? "Aktif" : prog.status}
-                        </Text>
-                      </View>
-                      <Text style={styles.programCardTitle} numberOfLines={1}>
-                        {prog.name}
-                      </Text>
-                      <Text style={styles.programCardDesc} numberOfLines={2}>
-                        {prog.description}
-                      </Text>
-                      {prog.targetAmount ? (
-                        <View style={styles.programTargetRow}>
-                          <Text style={styles.programTargetLabel}>Target:</Text>
-                          <Text style={styles.programTargetVal}>
-                            {formatRupiah(prog.targetAmount)}
-                          </Text>
-                        </View>
-                      ) : null}
-                    </View>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-
-            {/* Riwayat Transaksi Terkini Section */}
+          {/* Riwayat Transaksi Terkini Section */}
             <View style={styles.recentTransactionsSection}>
               <View style={styles.sectionHeaderRow}>
                 <View style={styles.sectionTitleWithBadge}>
@@ -859,74 +778,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: BorderRadius.round,
   },
-  programSectionContainer: {
-    marginBottom: Spacing.md,
-  },
-  programScrollContent: {
-    gap: 10,
-    paddingVertical: 4,
-  },
-  programCard: {
-    backgroundColor: Colors.white,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    padding: 12,
-    width: 200,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  programCardTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 6,
-  },
-  programBadge: {
-    backgroundColor: "#E0F2F1",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  programBadgeText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: "#00796B",
-  },
-  programStatusBadge: {
-    fontSize: 10.5,
-    fontWeight: "600",
-    color: "#16A34A",
-  },
-  programCardTitle: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: Colors.textPrimary,
-    marginBottom: 2,
-  },
-  programCardDesc: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-    marginBottom: 6,
-    lineHeight: 15,
-  },
-  programTargetRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  programTargetLabel: {
-    fontSize: 10.5,
-    color: Colors.textSecondary,
-  },
-  programTargetVal: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: Colors.primary,
-  },
+  
 });
 
 export default HomeScreen;

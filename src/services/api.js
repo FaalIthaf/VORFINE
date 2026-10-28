@@ -96,31 +96,52 @@ export const registerUser = async (fullName, email, phone, password) => {
  * Ambil daftar transaksi dari API
  * GET /products (digunakan sebagai dummy data transaksi)
  */
+const DEFAULT_VORFINE_TITLES = [
+  { title: "Gaji Pokok Bulanan", note: "Gaji transfer kantor", amount: 5000000, type: "income" },
+  { title: "Belanja Kebutuhan Pokok", note: "Sembako dan kebutuhan dapur", amount: 350000, type: "expense" },
+  { title: "Tagihan Listrik & WiFi", note: "Token PLN & internet bulanan", amount: 400000, type: "expense" },
+  { title: "Honor Freelance Desain", note: "Termin 1 project mobile app", amount: 1500000, type: "income" },
+  { title: "Makan Siang & Kafe", note: "Makan siang bersama tim", amount: 65000, type: "expense" },
+  { title: "Bensin Motor & Parkir", note: "BBM Pertamax mingguan", amount: 50000, type: "expense" },
+];
+
 export const fetchTransactions = async () => {
-  const response = await fetch(`${BASE_URL}/products?limit=10`);
-
-  if (!response.ok) {
-    throw new Error("Gagal mengambil data transaksi.");
+  try {
+    const response = await fetch(`${BASE_URL}/todos?limit=6`);
+    if (!response.ok) throw new Error("Gagal mengambil data transaksi.");
+    const data = await response.json();
+    const list = data?.todos || [];
+    return list.map((item, index) => {
+      const template = DEFAULT_VORFINE_TITLES[index % DEFAULT_VORFINE_TITLES.length];
+      return {
+        id: String(item.id || index + 1),
+        title: template.title,
+        note: template.note,
+        amount: formatRupiah(template.amount),
+        balance: formatRupiah(template.type === "income" ? template.amount : 4500000),
+        type: template.type,
+        date: formatDate(new Date(Date.now() - index * 86400000)),
+        rawDate: new Date(Date.now() - index * 86400000).toISOString(),
+        timestamp: Date.now() - index * 86400000,
+        numericAmount: template.amount,
+        profileId: "1",
+      };
+    });
+  } catch {
+    return DEFAULT_VORFINE_TITLES.map((template, index) => ({
+      id: `fallback-${index + 1}`,
+      title: template.title,
+      note: template.note,
+      amount: formatRupiah(template.amount),
+      balance: formatRupiah(template.type === "income" ? template.amount : 4500000),
+      type: template.type,
+      date: formatDate(new Date(Date.now() - index * 86400000)),
+      rawDate: new Date(Date.now() - index * 86400000).toISOString(),
+      timestamp: Date.now() - index * 86400000,
+      numericAmount: template.amount,
+      profileId: "1",
+    }));
   }
-
-  const data = await response.json();
-
-  // Mapping: sesuaikan field API → format TransactionItem di aplikasi
-  const transactions = data.products.map((item, index) => ({
-    id: String(item.id),
-    title: item.title,
-    note: item.description,
-    amount: formatRupiah(item.price * 1000), // harga di-konversi ke Rupiah
-    balance: formatRupiah(item.price * 5000),
-    type: index % 2 === 0 ? "income" : "expense", // selang-seling untuk demo
-    date: formatDate(new Date(Date.now() - index * 86400000)), // tanggal mundur
-    rawDate: new Date(Date.now() - index * 86400000).toISOString(),
-    timestamp: Date.now() - index * 86400000,
-    numericAmount: item.price * 1000,
-    profileId: "1",
-  }));
-
-  return transactions;
 };
 
 // ════════════════════════════════════════════════════════════
