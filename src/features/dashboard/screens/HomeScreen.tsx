@@ -10,8 +10,9 @@ import { TabType } from "@/types";
 import { parseAmountToNumber, parseTransactionDate } from "@/utils/dateUtils";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Modal,
   Platform,
@@ -28,6 +29,8 @@ import {
 import { BalanceCard } from "../components/BalanceCard";
 import { FinanceSummary } from "../components/FinanceSummary";
 import { InfoScreen } from "./InfoScreen";
+import { apiService } from "@/services";
+import { ProgramDTO, TransactionDTO } from "@/models";
 
 export const HomeScreen: React.FC = () => {
   const router = useRouter();
@@ -66,6 +69,84 @@ export const HomeScreen: React.FC = () => {
 
   const [refreshing, setRefreshing] = useState<boolean>(false);
 
+  // ─────────────────────────────────────────────────────────────
+  // Task 3: State penampung data dinamis dari REST API (DTO)
+  // ─────────────────────────────────────────────────────────────
+  const [apiTransactions, setApiTransactions] = useState<TransactionDTO[]>([]);
+  const [apiPrograms, setApiPrograms] = useState<ProgramDTO[]>([]);
+  const [isLoadingApi, setIsLoadingApi] = useState<boolean>(true);
+
+  // Helper format mata uang Rupiah
+  const formatRupiah = (val: number | string): string => {
+    if (typeof val === "string") {
+      if (val.startsWith("Rp") || val.startsWith("IDR")) return val;
+      val = Number(val) || 0;
+    }
+    const formatted = val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    return `Rp ${formatted},00`;
+  };
+
+  // Hook useEffect untuk memanggil fungsi API saat komponen pertama kali dimuat
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadApiData = async () => {
+      try {
+        setIsLoadingApi(true);
+
+        // 1. Panggil fungsi REST API (Task 2)
+        const [rawTransactions, rawPrograms] = await Promise.all([
+          apiService.fetchTransactions().catch(() => []),
+          apiService.fetchPrograms().catch(() => []),
+        ]);
+
+        if (!isMounted) return;
+
+        // 2. Gunakan metode .map() untuk menyesuaikan field server agar cocok dengan struktur DTO (Task 1)
+        const mappedTransactions: TransactionDTO[] = rawTransactions.map(
+          (item: any) => ({
+            id: String(item.id),
+            title: item.title,
+            amount: Number(item.amount) || 0,
+            type: item.type === "income" ? "income" : "expense",
+            category: item.category || "Umum",
+            date: item.date,
+            description: item.description || item.title,
+            status: item.status || "completed",
+            balanceAfter: item.balanceAfter,
+          })
+        );
+
+        const mappedPrograms: ProgramDTO[] = rawPrograms.map((item: any) => ({
+          id: String(item.id),
+          name: item.name || item.title || "Program VORFÍNE",
+          description: item.description || "",
+          category: item.category || "budget",
+          status: item.status || "active",
+          targetAmount: item.targetAmount || 0,
+          currentAmount: item.currentAmount || 0,
+          startDate: item.startDate || new Date().toISOString().split("T")[0],
+          progress: item.progress || 0,
+        }));
+
+        setApiTransactions(mappedTransactions);
+        setApiPrograms(mappedPrograms);
+      } catch (error) {
+        console.error("Gagal memuat data API pada Dashboard:", error);
+      } finally {
+        if (isMounted) {
+          setIsLoadingApi(false);
+        }
+      }
+    };
+
+    loadApiData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   // Helper feedback
   const showFeedback = (msg: string) => {
     if (Platform.OS === "android") {
@@ -79,12 +160,48 @@ export const HomeScreen: React.FC = () => {
     router.push("/notifications" as any);
   };
 
-  const onRefresh = React.useCallback(() => {
+  const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
-    setTimeout(() => {
-      setRefreshing(false);
+    try {
+      const [rawTransactions, rawPrograms] = await Promise.all([
+        apiService.fetchTransactions().catch(() => []),
+        apiService.fetchPrograms().catch(() => []),
+      ]);
+
+      const mappedTransactions: TransactionDTO[] = rawTransactions.map(
+        (item: any) => ({
+          id: String(item.id),
+          title: item.title,
+          amount: Number(item.amount) || 0,
+          type: item.type === "income" ? "income" : "expense",
+          category: item.category || "Umum",
+          date: item.date,
+          description: item.description || item.title,
+          status: item.status || "completed",
+          balanceAfter: item.balanceAfter,
+        })
+      );
+
+      const mappedPrograms: ProgramDTO[] = rawPrograms.map((item: any) => ({
+        id: String(item.id),
+        name: item.name || item.title || "Program VORFÍNE",
+        description: item.description || "",
+        category: item.category || "budget",
+        status: item.status || "active",
+        targetAmount: item.targetAmount || 0,
+        currentAmount: item.currentAmount || 0,
+        startDate: item.startDate || new Date().toISOString().split("T")[0],
+        progress: item.progress || 0,
+      }));
+
+      setApiTransactions(mappedTransactions);
+      setApiPrograms(mappedPrograms);
+      showFeedback("Data VORFÍNE berhasil diperbarui dari server");
+    } catch {
       showFeedback("Data VORFÍNE berhasil diperbarui");
-    }, 600);
+    } finally {
+      setRefreshing(false);
+    }
   }, []);
 
   const handleTabSelect = (tab: TabType) => {
@@ -95,6 +212,27 @@ export const HomeScreen: React.FC = () => {
       router.push("/finance" as any);
     }
   };
+
+  // 3. Mapping data dinamis DTO ke format tampilan kartu transaksi
+  const displayTransactions = useMemo(() => {
+    const formattedApiItems = apiTransactions.map((t) => ({
+      id: `api-${t.id}`,
+      title: t.title,
+      note: t.description || t.category,
+      date: t.date,
+      amount: formatRupiah(t.amount),
+      balance: t.balanceAfter ? formatRupiah(t.balanceAfter) : "Saldo: Terkelola",
+      type: t.type,
+      numericAmount: t.amount,
+      rawDate: t.date,
+      timestamp: new Date(t.date).getTime() || Date.now(),
+    }));
+
+    const combined = [...transactions, ...formattedApiItems];
+    return combined.filter(
+      (item, idx, arr) => arr.findIndex((t) => t.id === item.id) === idx
+    );
+  }, [transactions, apiTransactions]);
 
   // 5. Multi-Period calculations for Harian, Bulanan, and Tahunan
   const now = new Date();
@@ -110,7 +248,7 @@ export const HomeScreen: React.FC = () => {
     let yExp = 0;
     let yInc = 0;
 
-    transactions.forEach((t) => {
+    displayTransactions.forEach((t) => {
       const amt = t.numericAmount || parseAmountToNumber(t.amount);
       const d = parseTransactionDate(t);
       const isThisYear = d.getFullYear() === todayYear;
@@ -136,7 +274,7 @@ export const HomeScreen: React.FC = () => {
       yearlyExpense: Math.max(yExp, financeData.yearlyExpense || 0),
       yearlyIncome: yInc,
     };
-  }, [transactions, financeData, todayYear, todayMonth, todayDay]);
+  }, [displayTransactions, financeData, todayYear, todayMonth, todayDay]);
 
   const activeExpenseTitle =
     expensePeriod === "daily"
@@ -239,79 +377,140 @@ export const HomeScreen: React.FC = () => {
             onPressExpense={() => router.push("/expense" as any)}
           />
 
-          {/* Riwayat Transaksi Terkini Section */}
-          <View style={styles.recentTransactionsSection}>
-            <View style={styles.sectionHeaderRow}>
-              <View style={styles.sectionTitleWithBadge}>
-                <Text style={styles.sectionTitle}>Riwayat Transaksi</Text>
-                <View style={styles.transCountBadge}>
-                  <Text style={styles.transCountText}>
-                    {transactions.length}
-                  </Text>
+          {/* Section Program & Rencana Anggaran (Data Dinamis ProgramDTO dari API) */}
+            {apiPrograms.length > 0 && (
+              <View style={styles.programSectionContainer}>
+                <View style={styles.sectionHeaderRow}>
+                  <View style={styles.sectionTitleWithBadge}>
+                    <Text style={styles.sectionTitle}>Program & Anggaran</Text>
+                    <View style={[styles.transCountBadge, { backgroundColor: Colors.primary }]}>
+                      <Text style={styles.transCountText}>{apiPrograms.length}</Text>
+                    </View>
+                  </View>
                 </View>
-              </View>
-              <Pressable
-                onPress={() => {
-                  Alert.alert(
-                    "Pilih Mutasi Transaksi",
-                    "Buka rincian riwayat transaksi:",
-                    [
-                      {
-                        text: "Pemasukkan",
-                        onPress: () => router.push("/income" as any),
-                      },
-                      {
-                        text: "Pengeluaran",
-                        onPress: () => router.push("/expense" as any),
-                      },
-                      {
-                        text: "Catat Transaksi",
-                        onPress: () => router.push("/finance" as any),
-                      },
-                      { text: "Batal", style: "cancel" },
-                    ],
-                  );
-                }}
-                hitSlop={8}
-              ></Pressable>
-            </View>
 
-            {/* List Transaksi Terbaru — deduplikasi ID sebelum render */}
-            {transactions
-              .filter(
-                (item, idx, arr) =>
-                  arr.findIndex((t) => t.id === item.id) === idx,
-              )
-              .slice(0, 3)
-              .map((item, index) => (
-                <TransactionItemCard
-                  key={`${item.id}-${index}`}
-                  title={item.title}
-                  note={item.note}
-                  date={item.date}
-                  amount={item.amount}
-                  balance={item.balance}
-                  type={item.type}
-                  onPress={() => {
-                    if (item.type === "income") {
-                      router.push("/income" as any);
-                    } else {
-                      router.push("/expense" as any);
-                    }
-                  }}
-                />
-              ))}
-
-            {transactions.length === 0 && (
-              <View style={styles.emptyTransCard}>
-                <Text style={styles.emptyTransText}>
-                  Belum ada catatan transaksi. Catat melalui menu Keuangan.
-                </Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.programScrollContent}
+                >
+                  {apiPrograms.slice(0, 5).map((prog) => (
+                    <View key={prog.id} style={styles.programCard}>
+                      <View style={styles.programCardTop}>
+                        <View style={styles.programBadge}>
+                          <Text style={styles.programBadgeText}>
+                            {prog.category.toUpperCase()}
+                          </Text>
+                        </View>
+                        <Text style={styles.programStatusBadge}>
+                          {prog.status === "active" ? "Aktif" : prog.status}
+                        </Text>
+                      </View>
+                      <Text style={styles.programCardTitle} numberOfLines={1}>
+                        {prog.name}
+                      </Text>
+                      <Text style={styles.programCardDesc} numberOfLines={2}>
+                        {prog.description}
+                      </Text>
+                      {prog.targetAmount ? (
+                        <View style={styles.programTargetRow}>
+                          <Text style={styles.programTargetLabel}>Target:</Text>
+                          <Text style={styles.programTargetVal}>
+                            {formatRupiah(prog.targetAmount)}
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  ))}
+                </ScrollView>
               </View>
             )}
-          </View>
 
-          {/* Schedule Section dengan Waktu Real-Time Sinkron */}
+            {/* Riwayat Transaksi Terkini Section */}
+            <View style={styles.recentTransactionsSection}>
+              <View style={styles.sectionHeaderRow}>
+                <View style={styles.sectionTitleWithBadge}>
+                  <Text style={styles.sectionTitle}>Riwayat Transaksi</Text>
+                  <View style={styles.transCountBadge}>
+                    <Text style={styles.transCountText}>
+                      {displayTransactions.length}
+                    </Text>
+                  </View>
+                </View>
+                <Pressable
+                  onPress={() => {
+                    Alert.alert(
+                      "Pilih Mutasi Transaksi",
+                      "Buka rincian riwayat transaksi:",
+                      [
+                        {
+                          text: "Pemasukkan",
+                          onPress: () => router.push("/income" as any),
+                        },
+                        {
+                          text: "Pengeluaran",
+                          onPress: () => router.push("/expense" as any),
+                        },
+                        {
+                          text: "Catat Transaksi",
+                          onPress: () => router.push("/finance" as any),
+                        },
+                        { text: "Batal", style: "cancel" },
+                      ]
+                    );
+                  }}
+                  hitSlop={8}
+                ></Pressable>
+              </View>
+
+              {/* Status Loading Data API */}
+              {isLoadingApi && displayTransactions.length === 0 ? (
+                <View style={{ paddingVertical: 18, alignItems: "center" }}>
+                  <ActivityIndicator size="small" color={Colors.primary} />
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      color: Colors.textSecondary,
+                      marginTop: 6,
+                    }}
+                  >
+                    Memuat data transaksi dari server...
+                  </Text>
+                </View>
+              ) : (
+                /* List Transaksi Terbaru — render data dinamis DTO */
+                displayTransactions
+                  .slice(0, 3)
+                  .map((item, index) => (
+                    <TransactionItemCard
+                      key={`${item.id}-${index}`}
+                      title={item.title}
+                      note={item.note}
+                      date={item.date}
+                      amount={item.amount}
+                      balance={item.balance}
+                      type={item.type}
+                      onPress={() => {
+                        if (item.type === "income") {
+                          router.push("/income" as any);
+                        } else {
+                          router.push("/expense" as any);
+                        }
+                      }}
+                    />
+                  ))
+              )}
+
+              {!isLoadingApi && displayTransactions.length === 0 && (
+                <View style={styles.emptyTransCard}>
+                  <Text style={styles.emptyTransText}>
+                    Belum ada catatan transaksi. Catat melalui menu Keuangan.
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* Schedule Section dengan Waktu Real-Time Sinkron */}
           <ScheduleSection
             currentDateText={`${formattedSelectedDate} • ${currentTimeStr}`}
             items={filteredSchedules.slice(0, 4)}
@@ -659,6 +858,74 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: BorderRadius.round,
+  },
+  programSectionContainer: {
+    marginBottom: Spacing.md,
+  },
+  programScrollContent: {
+    gap: 10,
+    paddingVertical: 4,
+  },
+  programCard: {
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    padding: 12,
+    width: 200,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  programCardTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  programBadge: {
+    backgroundColor: "#E0F2F1",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  programBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#00796B",
+  },
+  programStatusBadge: {
+    fontSize: 10.5,
+    fontWeight: "600",
+    color: "#16A34A",
+  },
+  programCardTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+    marginBottom: 2,
+  },
+  programCardDesc: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginBottom: 6,
+    lineHeight: 15,
+  },
+  programTargetRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  programTargetLabel: {
+    fontSize: 10.5,
+    color: Colors.textSecondary,
+  },
+  programTargetVal: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: Colors.primary,
   },
 });
 
