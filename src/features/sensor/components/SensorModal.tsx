@@ -1,3 +1,4 @@
+import "@/utils/sensorPolyfill";
 import { BrandLogo } from "@/components/BrandLogo";
 import { BorderRadius, Colors, Spacing } from "@/constants/theme";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -81,7 +82,11 @@ export const SensorModal: React.FC<SensorModalProps> = ({
               const now = Date.now();
               if (now - lastVibrateRef.current > 800) {
                 lastVibrateRef.current = now;
-                Vibration.vibrate(500); // Memicu umpan balik getaran 500ms
+                try {
+                  Vibration.vibrate(500); // Memicu umpan balik getaran 500ms
+                } catch {
+                  // Fallback web
+                }
               }
 
               setIsInteracting(true);

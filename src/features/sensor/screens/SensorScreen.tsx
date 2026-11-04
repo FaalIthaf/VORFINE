@@ -1,3 +1,4 @@
+import "@/utils/sensorPolyfill";
 import { BrandLogo } from "@/components/BrandLogo";
 import { BottomNavBar } from "@/components/BottomNavBar";
 import { BorderRadius, Colors, Spacing } from "@/constants/theme";
@@ -99,7 +100,11 @@ export const SensorScreen: React.FC<SensorScreenProps> = ({
               // Batasi interval pemicuan getaran agar tidak overload (cooldown 800ms)
               if (now - lastVibrateTimeRef.current > 800) {
                 lastVibrateTimeRef.current = now;
-                Vibration.vibrate(500); // Memicu umpan balik getaran 500ms
+                try {
+                  Vibration.vibrate(500); // Memicu umpan balik getaran 500ms
+                } catch {
+                  // Fallback jika platform web tidak mendukung vibration
+                }
               }
 
               // Ubah state status interaktif

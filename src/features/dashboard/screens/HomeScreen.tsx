@@ -1,3 +1,4 @@
+import "@/utils/sensorPolyfill";
 import { BottomNavBar } from "@/components/BottomNavBar";
 import { Header } from "@/components/Header";
 import { BorderRadius, Colors, Spacing } from "@/constants/theme";
@@ -91,36 +92,45 @@ export const HomeScreen: React.FC = () => {
   const lastVibrateRef = React.useRef<number>(0);
 
   useEffect(() => {
-    // 1. Atur interval pembaruan ke 100ms
-    Accelerometer.setUpdateInterval(100);
-
+    let subscription: { remove: () => void } | null = null;
     const THRESHOLD = 1.5;
 
-    // 2. Tambahkan listener untuk menangkap nilai x, y, dan z
-    const subscription = Accelerometer.addListener((data) => {
-      setSensorData({
-        x: data.x,
-        y: data.y,
-        z: data.z,
-      });
+    try {
+      // 1. Atur interval pembaruan ke 100ms
+      Accelerometer.setUpdateInterval(100);
 
-      // 2. Hitung Magnitude: Math.sqrt(x * x + y * y + z * z)
-      const { x, y, z } = data;
-      const magnitude = Math.sqrt(x * x + y * y + z * z);
+      // 2. Tambahkan listener untuk menangkap nilai x, y, dan z
+      subscription = Accelerometer.addListener((data) => {
+        setSensorData({
+          x: data.x,
+          y: data.y,
+          z: data.z,
+        });
 
-      // 3. Logika Threshold & Getar: Jika magnitude > 1.5, jalankan Vibration.vibrate(500)
-      if (magnitude > THRESHOLD) {
-        const now = Date.now();
-        if (now - lastVibrateRef.current > 1000) {
-          lastVibrateRef.current = now;
-          Vibration.vibrate(500);
+        // 2. Hitung Magnitude: Math.sqrt(x * x + y * y + z * z)
+        const { x, y, z } = data;
+        const magnitude = Math.sqrt(x * x + y * y + z * z);
+
+        // 3. Logika Threshold & Getar: Jika magnitude > 1.5, jalankan Vibration.vibrate(500)
+        if (magnitude > THRESHOLD) {
+          const now = Date.now();
+          if (now - lastVibrateRef.current > 1000) {
+            lastVibrateRef.current = now;
+            try {
+              Vibration.vibrate(500);
+            } catch {}
+          }
         }
-      }
-    });
+      });
+    } catch (err) {
+      console.warn("[HomeScreen] Accelerometer listener warning:", err);
+    }
 
     // 3. Cleanup listener saat komponen di-unmount
     return () => {
-      subscription.remove();
+      if (subscription && typeof subscription.remove === "function") {
+        subscription.remove();
+      }
     };
   }, []);
 

@@ -1,3 +1,4 @@
+import "@/utils/sensorPolyfill";
 import { AppProvider } from "@/context/AppContext";
 import { AuthProvider, useAuth } from "@/features/auth";
 import { Stack, useRouter, useSegments } from "expo-router";
