@@ -41,8 +41,8 @@ export const TimeWheelPicker: React.FC<TimeWheelPickerProps> = ({
   const [selectedHour, setSelectedHour] = useState(8);
   const [selectedMinute, setSelectedMinute] = useState(0);
 
-  const hourScrollRef = useRef<ScrollView>(null);
-  const minuteScrollRef = useRef<ScrollView>(null);
+  const hourScrollRef = useRef<any>(null);
+  const minuteScrollRef = useRef<any>(null);
   const hourDebounceRef = useRef<any>(null);
   const minuteDebounceRef = useRef<any>(null);
 

@@ -152,7 +152,7 @@ export const SignUpScreen: React.FC = () => {
 
   return (
     <View style={styles.root}>
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
+      <StatusBar {...({ barStyle: "dark-content", backgroundColor: Colors.white } as any)} />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}

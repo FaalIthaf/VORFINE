@@ -281,7 +281,7 @@ export const HomeScreen: React.FC = () => {
 
   return (
     <View style={styles.rootContainer}>
-      <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
+      <StatusBar {...({ barStyle: "light-content", backgroundColor: Colors.primary } as any)} />
 
       {/* Header Section */}
       <Header

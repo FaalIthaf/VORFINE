@@ -46,14 +46,14 @@ export const Input = forwardRef<TextInput, InputProps>(
   ) => {
     const [isFocused, setIsFocused] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
-    const internalInputRef = useRef<TextInput>(null);
+    const internalInputRef = useRef<any>(null);
 
     useImperativeHandle(ref, () => internalInputRef.current as TextInput);
 
     const isSecure = isPassword ? !showPassword : secureTextEntry;
 
     const handleFocusInput = () => {
-      internalInputRef.current?.focus();
+      internalInputRef.current?.focus?.();
     };
 
     return (
@@ -196,8 +196,6 @@ const styles = StyleSheet.create({
   helperText: {
     color: "#64748B",
     fontSize: 12,
-    marginTop: 4,
-    marginLeft: 4,
   },
 });
 

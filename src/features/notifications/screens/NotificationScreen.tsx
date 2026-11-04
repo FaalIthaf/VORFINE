@@ -113,7 +113,7 @@ export const NotificationScreen: React.FC = () => {
         { backgroundColor: currentBackgroundColor },
       ]}
     >
-      <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
+      <StatusBar {...({ barStyle: "light-content", backgroundColor: Colors.primary } as any)} />
 
       {/* Top Bar Header */}
       <NotificationHeader onBackPress={handleBack} />

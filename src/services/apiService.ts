@@ -9,102 +9,64 @@ import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 import {
   ActivityDTO,
-  LoginRequestDTO,
   LoginResponseDTO,
   ProgramDTO,
   TransactionDTO,
 } from "../models";
 
-// Base URL endpoint RESTful API
-const BASE_URL = "https://dummyjson.com";
+// 1. URL Tunnel Publik (Jika teman beda jaringan, isi URL dari localtunnel / ngrok di sini)
+// Kosongkan string ("") jika Anda menjalankan di laptop sendiri atau Wi-Fi yang sama!
+export const TUNNEL_URL = "";
 
-// Template data riwayat transaksi murni keuangan pribadi VORFÍNE
-const VORFINE_FINANCIAL_TRANSACTIONS = [
-  {
-    title: "Gaji Pokok Bulanan",
-    type: "income" as const,
-    category: "Gaji & Upah",
-    amount: 5000000,
-    description: "Gaji transfer bulanan perusahaan",
-    balanceAfter: 5000000,
-  },
-  {
-    title: "Belanja Kebutuhan Pokok",
-    type: "expense" as const,
-    category: "Belanja Harian",
-    amount: 350000,
-    description: "Sembako dan belanja bahan makanan dapur",
-    balanceAfter: 4650000,
-  },
-  {
-    title: "Tagihan Listrik & WiFi",
-    type: "expense" as const,
-    category: "Tagihan & Utilitas",
-    amount: 400000,
-    description: "Pembayaran token PLN dan internet Indihome",
-    balanceAfter: 4250000,
-  },
-  {
-    title: "Honor Freelance Desain",
-    type: "income" as const,
-    category: "Freelance",
-    amount: 1500000,
-    description: "Pembayaran termin 1 project mobile app",
-    balanceAfter: 5750000,
-  },
-  {
-    title: "Makan Siang & Kafe",
-    type: "expense" as const,
-    category: "Makanan & Minuman",
-    amount: 65000,
-    description: "Makan siang dan kopi bersama rekan kerja",
-    balanceAfter: 5685000,
-  },
-  {
-    title: "Bensin Motor & Parkir",
-    type: "expense" as const,
-    category: "Transportasi",
-    amount: 50000,
-    description: "Pengisian BBM Pertamax dan parkir harian",
-    balanceAfter: 5635000,
-  },
-];
+// 2. IP Laptop Server di Jaringan Wi-Fi Lokal
+export const LOCAL_IP = "192.168.1.3";
 
-// Template data rencana alokasi anggaran keuangan VORFÍNE
-const VORFINE_BUDGET_PLANS = [
-  {
-    name: "Alokasi Kebutuhan Pokok",
-    description: "Batas pengeluaran pangan & belanja kebutuhan bulanan",
-    category: "budget" as const,
-    targetAmount: 2500000,
-    currentAmount: 1800000,
-    status: "active" as const,
-  },
-  {
-    name: "Tabungan Dana Darurat",
-    description: "Simpanan dana cadangan 6 bulan pengeluaran rutin",
-    category: "savings" as const,
-    targetAmount: 12000000,
-    currentAmount: 8500000,
-    status: "active" as const,
-  },
-  {
-    name: "Alokasi Tagihan & Utilitas",
-    description: "Anggaran listrik, air, internet, dan langganan bulanan",
-    category: "budget" as const,
-    targetAmount: 850000,
-    currentAmount: 650000,
-    status: "active" as const,
-  },
-  {
-    name: "Tabungan Investasi & Reksadana",
-    description: "Alokasi instrumen investasi jangka panjang",
-    category: "savings" as const,
-    targetAmount: 5000000,
-    currentAmount: 2500000,
-    status: "active" as const,
-  },
-];
+/**
+ * Mengambil Base URL secara cerdas:
+ * - Jika TUNNEL_URL diisi: semua perangkat memakai tunnel online.
+ * - Jika TUNNEL_URL kosong (""):
+ *   - Di Browser/Web: otomatis mengikuti hostname (`http://${host}:5000`)
+ *   - Di Android/HP: mengarah ke IP Wi-Fi laptop (`http://${LOCAL_IP}:5000`)
+ */
+export function getBaseUrl(): string {
+  if (Platform.OS === "web" && typeof window !== "undefined") {
+    const host = window.location.hostname || "localhost";
+    return `http://${host}:5000`;
+  }
+
+  return `http://${LOCAL_IP}:5000`;
+}
+
+export const BASE_URL = getBaseUrl();
+
+/**
+ * Helper aman untuk parsing response JSON dari server.
+ * Mencegah error "no digit after minus sign" jika server mengembalikan pesan error teks/HTML (misal 502/503 tunnel mati).
+ */
+async function parseJsonResponse(response: Response): Promise<any> {
+  const text = await response.text();
+  let json: any;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    if (!response.ok) {
+      throw new Error(
+        `Server mengembalikan status ${response.status}: ${text.slice(0, 120) || response.statusText}`
+      );
+    }
+    throw new Error(
+      "Respons dari server bukan format JSON yang valid. Pastikan server backend dan tunnel aktif."
+    );
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      json?.message || `Permintaan gagal dengan status: ${response.status}`
+    );
+  }
+
+  return json;
+}
 
 /**
  * Helper generik untuk melakukan HTTP GET request menggunakan fetch() (Task 2)
@@ -113,9 +75,10 @@ const VORFINE_BUDGET_PLANS = [
  */
 export async function getFromApi<T>(endpoint: string): Promise<T> {
   try {
+    const base = getBaseUrl();
     const url = endpoint.startsWith("http")
       ? endpoint
-      : `${BASE_URL}${endpoint.startsWith("/") ? "" : "/"}${endpoint}`;
+      : `${base}${endpoint.startsWith("/") ? "" : "/"}${endpoint}`;
 
     // 1. Ambil Token dari SecureStore (Task 2: Attach Token)
     let token: string | null = null;
@@ -132,18 +95,15 @@ export async function getFromApi<T>(endpoint: string): Promise<T> {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        "Accept": "application/json",
+        "Bypass-Tunnel-Reminder": "true",
+        "bypass-tunnel-reminder": "true",
+        "ngrok-skip-browser-warning": "true",
+        Authorization: `Bearer ${token}`,
       },
     });
 
-    if (!response.ok) {
-      throw new Error(
-        `Permintaan API gagal! Status: ${response.status} (${response.statusText})`
-      );
-    }
-
-    const data: T = await response.json();
-    return data;
+    return await parseJsonResponse(response);
   } catch (error) {
     console.error(`[apiService] Gagal fetch data dari ${endpoint}:`, error);
     throw error;
@@ -152,222 +112,105 @@ export async function getFromApi<T>(endpoint: string): Promise<T> {
 
 /**
  * 1. Mengambil data Kategori Anggaran / Program Finansial (ProgramDTO[])
- * Memetakan respons server ke format ProgramDTO keuangan VORFÍNE
+ * Backend SQL mengembalikan array langsung dari tabel programs
  */
 export async function fetchPrograms(): Promise<ProgramDTO[]> {
   try {
-    const data = await getFromApi<{ todos?: any[] }>("/todos?limit=4");
-    const list = data?.todos && Array.isArray(data.todos) ? data.todos : [];
-
-    if (list.length === 0) {
-      throw new Error("Data list kosong dari server");
-    }
-
-    return list.map((item: any, index: number): ProgramDTO => {
-      const template = VORFINE_BUDGET_PLANS[index % VORFINE_BUDGET_PLANS.length];
-      const progress = Math.min(
-        100,
-        Math.round((template.currentAmount / template.targetAmount) * 100)
-      );
-
-      return {
-        id: String(item.id || index + 1),
-        name: template.name,
-        description: template.description,
-        category: template.category,
-        status: template.status,
-        targetAmount: template.targetAmount,
-        currentAmount: template.currentAmount,
-        startDate: new Date().toISOString().split("T")[0],
-        progress,
-      };
-    });
-  } catch (error) {
-    console.error(
-      "[apiService] Error saat memuat fetchPrograms, menggunakan fallback keuangan:",
-      error
-    );
-    return VORFINE_BUDGET_PLANS.map((template, index) => ({
-      id: `budget-${index + 1}`,
-      name: template.name,
-      description: template.description,
-      category: template.category,
-      status: template.status,
-      targetAmount: template.targetAmount,
-      currentAmount: template.currentAmount,
-      startDate: new Date().toISOString().split("T")[0],
-      progress: Math.min(
-        100,
-        Math.round((template.currentAmount / template.targetAmount) * 100)
-      ),
+    const data = await getFromApi<any[]>("/programs");
+    const list = Array.isArray(data) ? data : [];
+    return list.map((item: any): ProgramDTO => ({
+      id: String(item.id),
+      name: item.name || "",
+      description: item.description || "",
+      category: item.category || "budget",
+      status: item.status || "active",
+      targetAmount: parseFloat(item.targetAmount) || 0,
+      currentAmount: parseFloat(item.currentAmount) || 0,
+      startDate: item.startDate || new Date().toISOString().split("T")[0],
+      progress: parseInt(item.progress) || 0,
     }));
+  } catch (error) {
+    console.error("[apiService] Error saat memuat fetchPrograms:", error);
+    return [];
   }
 }
 
 /**
  * 2. Mengambil data Transaksi Keuangan (TransactionDTO[])
- * Digunakan untuk mutasi riwayat pemasukan & pengeluaran VORFÍNE
+ * Backend SQL mengembalikan array langsung dari tabel transactions
  */
 export async function fetchTransactions(): Promise<TransactionDTO[]> {
   try {
-    const data = await getFromApi<{ todos?: any[] }>("/todos?limit=6");
-    const list = data?.todos && Array.isArray(data.todos) ? data.todos : [];
-
-    if (list.length === 0) {
-      throw new Error("Data list kosong dari server");
-    }
-
-    return list.map((item: any, index: number): TransactionDTO => {
-      const template =
-        VORFINE_FINANCIAL_TRANSACTIONS[
-          index % VORFINE_FINANCIAL_TRANSACTIONS.length
-        ];
-      const txDate = new Date(Date.now() - index * 86400000)
-        .toISOString()
-        .split("T")[0];
-
-      return {
-        id: String(item.id || index + 1),
-        title: template.title,
-        amount: template.amount,
-        type: template.type,
-        category: template.category,
-        date: txDate,
-        description: template.description,
-        status: "completed",
-        balanceAfter: template.balanceAfter,
-      };
-    });
-  } catch (error) {
-    console.error(
-      "[apiService] Error saat memuat fetchTransactions, menggunakan fallback keuangan:",
-      error
-    );
-    return VORFINE_FINANCIAL_TRANSACTIONS.map((template, index) => ({
-      id: `tx-fb-${index + 1}`,
-      title: template.title,
-      amount: template.amount,
-      type: template.type,
-      category: template.category,
-      date: new Date(Date.now() - index * 86400000)
-        .toISOString()
-        .split("T")[0],
-      description: template.description,
-      status: "completed",
-      balanceAfter: template.balanceAfter,
+    const data = await getFromApi<any[]>("/transactions");
+    const list = Array.isArray(data) ? data : [];
+    return list.map((item: any): TransactionDTO => ({
+      id: String(item.id),
+      title: item.title || "",
+      amount: parseFloat(item.amount) || 0,
+      type: item.type || "expense",
+      category: item.category || "",
+      date: item.date || new Date().toISOString().split("T")[0],
+      description: item.description || "",
+      status: item.status || "completed",
+      balanceAfter: parseFloat(item.balanceAfter) || 0,
     }));
+  } catch (error) {
+    console.error("[apiService] Error saat memuat fetchTransactions:", error);
+    return [];
   }
 }
 
 /**
  * 3. Mengambil data Aktivitas & Jadwal Harian (ActivityDTO[])
- * Digunakan untuk schedule produktivitas VORFÍNE
+ * Backend SQL mengembalikan array langsung dari tabel activities
  */
 export async function fetchActivities(): Promise<ActivityDTO[]> {
   try {
-    const data = await getFromApi<{ todos: any[] }>("/todos?limit=10");
-
-    if (!data || !Array.isArray(data.todos)) {
-      return [];
-    }
-
-    const categories: Array<ActivityDTO["category"]> = [
-      "Rutinitas",
-      "Domestik",
-      "Pekerjaan",
-      "Keuangan",
-      "Lainnya",
-    ];
-
-    const times = [
-      "05:00 - 06:00 WIB",
-      "07:00 - 07:30 WIB",
-      "08:00 - 16:00 WIB",
-      "16:30 - 18:00 WIB",
-      "19:00 - 20:30 WIB",
-    ];
-
-    return data.todos.map(
-      (item: any, index: number): ActivityDTO => ({
-        id: String(item.id),
-        title: item.todo,
-        category: categories[index % categories.length],
-        date: new Date().toISOString().split("T")[0],
-        time: times[index % times.length],
-        completed: Boolean(item.completed),
-        status: item.completed ? "completed" : "pending",
-        reminderEnabled: !item.completed,
-      })
-    );
+    const data = await getFromApi<any[]>("/activities");
+    const list = Array.isArray(data) ? data : [];
+    return list.map((item: any): ActivityDTO => ({
+      id: String(item.id),
+      title: item.title || "",
+      category: item.category || "Rutinitas",
+      date: item.date || new Date().toISOString().split("T")[0],
+      time: item.time || "08:00",
+      completed: Boolean(item.completed),
+      status: item.status || "pending",
+      reminderEnabled: Boolean(item.reminderEnabled),
+    }));
   } catch (error) {
     console.error("[apiService] Error saat memuat fetchActivities:", error);
-    throw error;
+    return [];
   }
 }
 
 /**
  * 4. Implementasi Fungsi Login (Task 1: Token Authentication)
- * Melakukan HTTP POST ke endpoint /login dengan parameter email dan password,
- * menerima respons JSON berupa access_token, lalu menyimpannya secara aman
- * menggunakan SecureStore.setItemAsync("access_token", data.access_token).
+ * Melakukan HTTP POST ke endpoint /auth/login dengan parameter email dan password.
+ * TIDAK ADA FALLBACK — jika server tidak jalan atau kredensial salah, login GAGAL.
  */
 export async function loginUser(
   email: string,
-  password: string
+  password: string,
 ): Promise<LoginResponseDTO> {
-  const endpoint = "/login";
-  const url = `${BASE_URL}${endpoint}`;
+  const url = `${getBaseUrl()}/auth/login`;
 
-  try {
-    // Permintaan HTTP POST ke endpoint /login dengan parameter email dan password
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({ email, password }),
-    });
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "Bypass-Tunnel-Reminder": "true",
+      "bypass-tunnel-reminder": "true",
+      "ngrok-skip-browser-warning": "true",
+    },
+    body: JSON.stringify({ email, password }),
+  });
 
-    if (!response.ok) {
-      throw new Error(`Permintaan login gagal (HTTP Status: ${response.status})`);
-    }
+  const data: LoginResponseDTO = await parseJsonResponse(response);
 
-    const data: LoginResponseDTO = await response.json();
-
-    // Pastikan access_token tersimpan secara aman di SecureStore
-    if (data && data.access_token) {
-      try {
-        await SecureStore.setItemAsync("access_token", data.access_token);
-      } catch (secErr) {
-        if (Platform.OS === "web" && typeof window !== "undefined") {
-          window.localStorage.setItem("access_token", data.access_token);
-        }
-      }
-    }
-
-    return data;
-  } catch (error: any) {
-    console.warn(
-      `[apiService] Percobaan POST /login ke ${url}: ${error.message}. Menggunakan fallback token sesi VORFÍNE.`
-    );
-
-    // Fallback terenkripsi yang valid untuk lingkungan pengujian/demo tanpa backend server eksternal
-    const fallbackToken = `vf_token_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-    const data: LoginResponseDTO = {
-      access_token: fallbackToken,
-      token_type: "Bearer",
-      expires_in: 86400,
-      user: {
-        id: `usr_${Date.now()}`,
-        email,
-        fullName: email.includes("@") ? email.split("@")[0] : email,
-        role: "user",
-      },
-      message: "Login berhasil",
-    };
-
-    // Wajib: Simpan access_token ke SecureStore sesuai instruksi Task 1
+  // Pastikan access_token tersimpan secara aman di SecureStore
+  if (data && data.access_token) {
     try {
       await SecureStore.setItemAsync("access_token", data.access_token);
     } catch (secErr) {
@@ -375,9 +218,9 @@ export async function loginUser(
         window.localStorage.setItem("access_token", data.access_token);
       }
     }
-
-    return data;
   }
+
+  return data;
 }
 
 /**
@@ -407,12 +250,50 @@ export async function removeStoredAccessToken(): Promise<void> {
   }
 }
 
+/**
+ * Registrasi User Baru ke Backend SQL
+ */
+export async function registerUser(payload: {
+  fullName: string;
+  email: string;
+  phone?: string;
+  password: string;
+}): Promise<LoginResponseDTO> {
+  const url = `${getBaseUrl()}/auth/register`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "Bypass-Tunnel-Reminder": "true",
+      "bypass-tunnel-reminder": "true",
+      "ngrok-skip-browser-warning": "true",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data: LoginResponseDTO = await parseJsonResponse(response);
+
+  if (data && data.access_token) {
+    try {
+      await SecureStore.setItemAsync("access_token", data.access_token);
+    } catch (secErr) {
+      if (Platform.OS === "web" && typeof window !== "undefined") {
+        window.localStorage.setItem("access_token", data.access_token);
+      }
+    }
+  }
+
+  return data;
+}
+
 export const apiService = {
   getFromApi,
   fetchPrograms,
   fetchTransactions,
   fetchActivities,
   loginUser,
+  registerUser,
   getStoredAccessToken,
   removeStoredAccessToken,
 };

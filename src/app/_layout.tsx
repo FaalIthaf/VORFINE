@@ -18,8 +18,9 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const segments = useSegments();
   const router = useRouter();
 
-  const firstSegment = (segments[0] as string | undefined) || "";
-  const authSubpage = (segments[1] as string | undefined) || "";
+  const segs = segments as any;
+  const firstSegment = (segs[0] as string | undefined) || "";
+  const authSubpage = (segs[1] as string | undefined) || "";
 
   const isAuthGroup = firstSegment === "auth" || firstSegment === "login";
   // Subpages like "fingerprint" and "face-id" can be viewed while authenticated

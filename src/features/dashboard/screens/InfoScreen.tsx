@@ -104,7 +104,7 @@ export const InfoScreen: React.FC<InfoScreenProps> = ({
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#538389" />
+      <StatusBar {...({ barStyle: "light-content", backgroundColor: "#538389" } as any)} />
 
       {/* A. Header / App Bar */}
       {showHeader && (

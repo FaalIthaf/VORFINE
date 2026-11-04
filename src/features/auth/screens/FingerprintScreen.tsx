@@ -80,7 +80,7 @@ export const FingerprintScreen: React.FC = () => {
 
   return (
     <View style={styles.root}>
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
+      <StatusBar {...({ barStyle: "dark-content", backgroundColor: Colors.white } as any)} />
 
       {/* Top Header */}
       <View style={{ paddingTop: insets.top }}>

@@ -69,7 +69,7 @@ export const SignInScreen: React.FC = () => {
 
   return (
     <View style={styles.root}>
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
+      <StatusBar {...({ barStyle: "dark-content", backgroundColor: Colors.white } as any)} />
 
       {/* Top Safe Area Inset — Header removed for clean, focused login UI */}
       <View style={{ height: insets.top }} />
@@ -108,7 +108,7 @@ export const SignInScreen: React.FC = () => {
             ) : null}
 
             <Input
-              label="Email atau Username"
+              label="Email"
               value={emailOrUsername}
               onChangeText={(text) => {
                 setEmailOrUsername(text);
