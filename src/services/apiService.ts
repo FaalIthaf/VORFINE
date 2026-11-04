@@ -44,24 +44,18 @@ export const BASE_URL = getBaseUrl();
  * Mencegah error "no digit after minus sign" jika server mengembalikan pesan error teks/HTML (misal 502/503 tunnel mati).
  */
 async function parseJsonResponse(response: Response): Promise<any> {
+  // 1. Periksa Response: Pengecekan response.ok sebelum parsing data JSON
+  if (!response.ok) {
+    throw new Error("HTTP " + response.status);
+  }
+
   const text = await response.text();
   let json: any;
   try {
     json = JSON.parse(text);
   } catch {
-    if (!response.ok) {
-      throw new Error(
-        `Server mengembalikan status ${response.status}: ${text.slice(0, 120) || response.statusText}`
-      );
-    }
     throw new Error(
       "Respons dari server bukan format JSON yang valid. Pastikan server backend dan tunnel aktif."
-    );
-  }
-
-  if (!response.ok) {
-    throw new Error(
-      json?.message || `Permintaan gagal dengan status: ${response.status}`
     );
   }
 
@@ -103,6 +97,11 @@ export async function getFromApi<T>(endpoint: string): Promise<T> {
       },
     });
 
+    // 1. Periksa Response: Tambahkan pengecekan if (!response.ok) { throw new Error('HTTP ' + response.status); } sebelum memparsing data JSON
+    if (!response.ok) {
+      throw new Error("HTTP " + response.status);
+    }
+
     return await parseJsonResponse(response);
   } catch (error) {
     console.error(`[apiService] Gagal fetch data dari ${endpoint}:`, error);
@@ -131,7 +130,7 @@ export async function fetchPrograms(): Promise<ProgramDTO[]> {
     }));
   } catch (error) {
     console.error("[apiService] Error saat memuat fetchPrograms:", error);
-    return [];
+    throw error;
   }
 }
 
@@ -156,7 +155,7 @@ export async function fetchTransactions(): Promise<TransactionDTO[]> {
     }));
   } catch (error) {
     console.error("[apiService] Error saat memuat fetchTransactions:", error);
-    return [];
+    throw error;
   }
 }
 
@@ -180,7 +179,7 @@ export async function fetchActivities(): Promise<ActivityDTO[]> {
     }));
   } catch (error) {
     console.error("[apiService] Error saat memuat fetchActivities:", error);
-    return [];
+    throw error;
   }
 }
 
@@ -206,6 +205,11 @@ export async function loginUser(
     },
     body: JSON.stringify({ email, password }),
   });
+
+  // Periksa Response: Pengecekan response.ok sebelum parsing JSON
+  if (!response.ok) {
+    throw new Error("HTTP " + response.status);
+  }
 
   const data: LoginResponseDTO = await parseJsonResponse(response);
 
@@ -271,6 +275,11 @@ export async function registerUser(payload: {
     },
     body: JSON.stringify(payload),
   });
+
+  // Periksa Response: Pengecekan response.ok sebelum parsing JSON
+  if (!response.ok) {
+    throw new Error("HTTP " + response.status);
+  }
 
   const data: LoginResponseDTO = await parseJsonResponse(response);
 

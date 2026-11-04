@@ -70,10 +70,14 @@ export const HomeScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState<boolean>(false);
 
   // ─────────────────────────────────────────────────────────────
-  // Task 3: State penampung data dinamis dari REST API (DTO)
+  // Task 1: State penampung error dan status loading (Error Handling)
   // ─────────────────────────────────────────────────────────────
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setErrorMessage] = useState<string | null>(null);
   const [apiTransactions, setApiTransactions] = useState<TransactionDTO[]>([]);
-    const [isLoadingApi, setIsLoadingApi] = useState<boolean>(true);
+
+  // Tetap sinkronkan isLoadingApi untuk kompatibilitas tampilan
+  const isLoadingApi = loading;
 
   // Helper format mata uang Rupiah
   const formatRupiah = (val: number | string): string => {
@@ -91,10 +95,11 @@ export const HomeScreen: React.FC = () => {
 
     const loadApiData = async () => {
       try {
-        setIsLoadingApi(true);
+        setLoading(true);
+        setErrorMessage(null);
 
         // 1. Panggil fungsi REST API transaksi VORFÍNE (Task 2)
-        const rawTransactions = await apiService.fetchTransactions().catch(() => []);
+        const rawTransactions = await apiService.fetchTransactions();
 
         if (!isMounted) return;
 
@@ -114,11 +119,18 @@ export const HomeScreen: React.FC = () => {
         );
 
         setApiTransactions(mappedTransactions);
-      } catch (error) {
-        console.error("Gagal memuat data API pada Dashboard:", error);
-      } finally {
+        setErrorMessage(null);
+      } catch (err: any) {
+        console.error("Gagal memuat data API pada Dashboard:", err);
         if (isMounted) {
-          setIsLoadingApi(false);
+          setErrorMessage(err?.message || "Terjadi kesalahan saat memuat data.");
+          // Memastikan data tidak ditampilkan jika terjadi kegagalan
+          setApiTransactions([]);
+        }
+      } finally {
+        // Pastikan setLoading(false) dijalankan di dalam blok finally agar tidak infinite loading
+        if (isMounted) {
+          setLoading(false);
         }
       }
     };
@@ -145,8 +157,10 @@ export const HomeScreen: React.FC = () => {
 
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
+    setLoading(true);
+    setErrorMessage(null);
     try {
-      const rawTransactions = await apiService.fetchTransactions().catch(() => []);
+      const rawTransactions = await apiService.fetchTransactions();
 
       const mappedTransactions: TransactionDTO[] = rawTransactions.map(
         (item: any) => ({
@@ -163,10 +177,15 @@ export const HomeScreen: React.FC = () => {
       );
 
       setApiTransactions(mappedTransactions);
+      setErrorMessage(null);
       showFeedback("Data transaksi VORFÍNE berhasil diperbarui");
-    } catch {
-      showFeedback("Data VORFÍNE berhasil diperbarui");
+    } catch (err: any) {
+      setErrorMessage(err?.message || "Gagal memperbarui data transaksi.");
+      // Memastikan data tidak ditampilkan jika terjadi kegagalan
+      setApiTransactions([]);
+      showFeedback("Gagal memperbarui data: " + (err?.message || ""));
     } finally {
+      setLoading(false);
       setRefreshing(false);
     }
   }, []);
@@ -423,7 +442,9 @@ export const HomeScreen: React.FC = () => {
               {!isLoadingApi && displayTransactions.length === 0 && (
                 <View style={styles.emptyTransCard}>
                   <Text style={styles.emptyTransText}>
-                    Belum ada catatan transaksi. Catat melalui menu Keuangan.
+                    {error
+                      ? `Gagal memuat data (${error}). Tarik layar ke bawah untuk mencoba lagi.`
+                      : "Belum ada catatan transaksi. Catat melalui menu Keuangan."}
                   </Text>
                 </View>
               )}
