@@ -24,6 +24,7 @@ import {
   Text,
   ToastAndroid,
   TouchableWithoutFeedback,
+  Vibration,
   View,
 } from "react-native";
 import { BalanceCard } from "../components/BalanceCard";
@@ -74,7 +75,8 @@ export const HomeScreen: React.FC = () => {
 
   // ─────────────────────────────────────────────────────────────
   // ─────────────────────────────────────────────────────────────
-  // Task 1 & 2: State Management Data Sensor: koordinat { x, y, z }
+  // ─────────────────────────────────────────────────────────────
+  // Task 1, 2, 3: State Sensor, Magnitude, Threshold & Vibration
   // ─────────────────────────────────────────────────────────────
   const [sensorData, setSensorData] = useState<{
     x: number;
@@ -86,9 +88,13 @@ export const HomeScreen: React.FC = () => {
   const accelerometerData = sensorData;
   const setAccelerometerData = setSensorData;
 
+  const lastVibrateRef = React.useRef<number>(0);
+
   useEffect(() => {
     // 1. Atur interval pembaruan ke 100ms
     Accelerometer.setUpdateInterval(100);
+
+    const THRESHOLD = 1.5;
 
     // 2. Tambahkan listener untuk menangkap nilai x, y, dan z
     const subscription = Accelerometer.addListener((data) => {
@@ -97,6 +103,19 @@ export const HomeScreen: React.FC = () => {
         y: data.y,
         z: data.z,
       });
+
+      // 2. Hitung Magnitude: Math.sqrt(x * x + y * y + z * z)
+      const { x, y, z } = data;
+      const magnitude = Math.sqrt(x * x + y * y + z * z);
+
+      // 3. Logika Threshold & Getar: Jika magnitude > 1.5, jalankan Vibration.vibrate(500)
+      if (magnitude > THRESHOLD) {
+        const now = Date.now();
+        if (now - lastVibrateRef.current > 1000) {
+          lastVibrateRef.current = now;
+          Vibration.vibrate(500);
+        }
+      }
     });
 
     // 3. Cleanup listener saat komponen di-unmount

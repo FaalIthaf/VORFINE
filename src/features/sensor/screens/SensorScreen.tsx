@@ -7,13 +7,14 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Accelerometer } from "expo-sensors";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  Vibration,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -56,7 +57,17 @@ export const SensorScreen: React.FC<SensorScreenProps> = ({
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
 
   // ─────────────────────────────────────────────────────────────
-  // Listener & Update Interval (100ms)
+  // Task 3: Ambang Batas (Threshold), Umpan Balik Getaran & Status Interaktif
+  // ─────────────────────────────────────────────────────────────
+  const THRESHOLD = 1.5; // Batas ambang akselerasi (g)
+  const [isInteracting, setIsInteracting] = useState<boolean>(false);
+  const [interactionStatus, setInteractionStatus] =
+    useState<string>("Normal (Tenang)");
+  const lastVibrateTimeRef = useRef<number>(0);
+  const resetTimerRef = useRef<any>(null);
+
+  // ─────────────────────────────────────────────────────────────
+  // 2 & 3. Listener, Perhitungan Magnitude & Logika Threshold Getar
   // ─────────────────────────────────────────────────────────────
   useEffect(() => {
     let subscription: { remove: () => void } | null = null;
@@ -78,14 +89,33 @@ export const SensorScreen: React.FC<SensorScreenProps> = ({
           subscription = Accelerometer.addListener((accelerometerMeasurement) => {
             setSensorData(accelerometerMeasurement);
 
-            // Deteksi guncangan sederhana jika total akselerasi > 1.75g
-            const totalGVal = Math.sqrt(
-              accelerometerMeasurement.x * accelerometerMeasurement.x +
-              accelerometerMeasurement.y * accelerometerMeasurement.y +
-              accelerometerMeasurement.z * accelerometerMeasurement.z
-            );
-            if (totalGVal > 1.75) {
+            // 2. Hitung Magnitude: Math.sqrt(x * x + y * y + z * z)
+            const { x, y, z } = accelerometerMeasurement;
+            const magnitude = Math.sqrt(x * x + y * y + z * z);
+
+            // 3. Logika Threshold & Getar: Jika magnitude > 1.5, getarkan 500ms
+            if (magnitude > THRESHOLD) {
+              const now = Date.now();
+              // Batasi interval pemicuan getaran agar tidak overload (cooldown 800ms)
+              if (now - lastVibrateTimeRef.current > 800) {
+                lastVibrateTimeRef.current = now;
+                Vibration.vibrate(500); // Memicu umpan balik getaran 500ms
+              }
+
+              // Ubah state status interaktif
+              setIsInteracting(true);
+              setInteractionStatus(
+                `Guncangan Terdeteksi! (${magnitude.toFixed(2)}G > ${THRESHOLD}G)`
+              );
               setShakeCount((prev) => prev + 1);
+
+              if (resetTimerRef.current) {
+                clearTimeout(resetTimerRef.current);
+              }
+              resetTimerRef.current = setTimeout(() => {
+                setIsInteracting(false);
+                setInteractionStatus("Normal (Tenang)");
+              }, 1500);
             }
           });
         }
@@ -100,6 +130,9 @@ export const SensorScreen: React.FC<SensorScreenProps> = ({
     return () => {
       if (subscription) {
         subscription.remove();
+      }
+      if (resetTimerRef.current) {
+        clearTimeout(resetTimerRef.current);
       }
     };
   }, [isActive, intervalMs]);
@@ -208,6 +241,52 @@ export const SensorScreen: React.FC<SensorScreenProps> = ({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* Banner Status Interaktif & Threshold Feedback (Task 3) */}
+        <View
+          style={[
+            styles.interactionBanner,
+            {
+              backgroundColor: isInteracting ? "#FFEBEE" : "#F0FDF4",
+              borderColor: isInteracting ? "#EF5350" : "#BBF7D0",
+            },
+          ]}
+        >
+          <View style={styles.interactionLeftRow}>
+            <MaterialCommunityIcons
+              name={isInteracting ? "vibrate" : "shield-check-outline"}
+              size={24}
+              color={isInteracting ? "#D32F2F" : "#16A34A"}
+            />
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text
+                style={[
+                  styles.interactionTitle,
+                  { color: isInteracting ? "#D32F2F" : "#16A34A" },
+                ]}
+              >
+                {isInteracting
+                  ? "Peringatan: Guncangan Terdeteksi!"
+                  : "Status Sensor: Stabil"}
+              </Text>
+              <Text style={styles.interactionSubtitle}>
+                {isInteracting
+                  ? `Magnitudo: ${totalG.toFixed(2)}G > ${THRESHOLD}G (Vibration 500ms Berjalan)`
+                  : `Batas ambang getar: ${THRESHOLD}G | ${interactionStatus}`}
+              </Text>
+            </View>
+          </View>
+          <View
+            style={[
+              styles.interactionBadge,
+              { backgroundColor: isInteracting ? "#D32F2F" : "#16A34A" },
+            ]}
+          >
+            <Text style={styles.interactionBadgeText}>
+              {isInteracting ? "SHAKE" : "READY"}
+            </Text>
+          </View>
+        </View>
+
         {/* Card Status & Sampling Interval */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
@@ -439,14 +518,30 @@ export const SensorScreen: React.FC<SensorScreenProps> = ({
             </Text>
           </View>
 
-          <View style={[styles.gridCard, { flex: 1 }]}>
+          <View
+            style={[
+              styles.gridCard,
+              { flex: 1 },
+              isInteracting && {
+                borderColor: "#EF5350",
+                backgroundColor: "#FFF5F5",
+              },
+            ]}
+          >
             <MaterialCommunityIcons
               name="vibrate"
               size={24}
-              color="#6A1B9A"
+              color={isInteracting ? "#D32F2F" : "#6A1B9A"}
             />
             <Text style={styles.gridCardLabel}>Deteksi Guncangan</Text>
-            <Text style={styles.gridCardValue}>{shakeCount}x</Text>
+            <Text
+              style={[
+                styles.gridCardValue,
+                isInteracting && { color: "#D32F2F" },
+              ]}
+            >
+              {shakeCount}x
+            </Text>
           </View>
         </View>
 
@@ -457,10 +552,12 @@ export const SensorScreen: React.FC<SensorScreenProps> = ({
             <Text style={styles.infoTitle}>Informasi Modul Accelerometer</Text>
           </View>
           <Text style={styles.infoBody}>
-            Nilai akselerasi direpresentasikan dalam percepatan gravitasi bumi{" "}
-            <Text style={styles.boldText}>(1 g ≈ 9.81 m/s²)</Text>. Setiap sumbu
-            diformat bersih menggunakan <Text style={styles.boldText}>.toFixed(2)</Text>{" "}
-            untuk kemudahan pemantauan real-time.
+            Nilai percepatan dihitung menggunakan rumus magnitudo{" "}
+            <Text style={styles.codeText}>Math.sqrt(x*x + y*y + z*z)</Text>. Jika nilai
+            melebihi ambang batas <Text style={styles.boldText}>{THRESHOLD} g</Text>,
+            sistem secara otomatis memicu umpan balik getaran{" "}
+            <Text style={styles.codeText}>Vibration.vibrate(500)</Text> dan memperbarui status
+            interaktif.
           </Text>
         </View>
       </ScrollView>
@@ -519,6 +616,46 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: Spacing.lg,
     paddingBottom: 24,
+  },
+  interactionBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1.5,
+    marginBottom: Spacing.md,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  interactionLeftRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  interactionTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  interactionSubtitle: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  interactionBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginLeft: 8,
+  },
+  interactionBadgeText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: Colors.white,
+    letterSpacing: 0.5,
   },
   card: {
     backgroundColor: Colors.white,
@@ -642,6 +779,12 @@ const styles = StyleSheet.create({
   intervalPillTextActive: {
     color: Colors.white,
   },
+  sectionHeader: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+    marginBottom: Spacing.sm,
+  },
   numericSummaryRow: {
     flexDirection: "row",
     backgroundColor: "#F8FAFC",
@@ -673,12 +816,6 @@ const styles = StyleSheet.create({
     width: 1,
     height: 32,
     backgroundColor: "#E2E8F0",
-  },
-  sectionHeader: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: Colors.textPrimary,
-    marginBottom: Spacing.sm,
   },
   axisItem: {
     marginBottom: Spacing.md,

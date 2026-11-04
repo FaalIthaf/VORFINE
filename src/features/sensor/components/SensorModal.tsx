@@ -2,7 +2,7 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { BorderRadius, Colors, Spacing } from "@/constants/theme";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Accelerometer } from "expo-sensors";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Modal,
   Platform,
@@ -11,6 +11,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  Vibration,
   View,
 } from "react-native";
 
@@ -40,6 +41,16 @@ export const SensorModal: React.FC<SensorModalProps> = ({
   const [isActive, setIsActive] = useState<boolean>(true);
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
 
+  // ─────────────────────────────────────────────────────────────
+  // Task 3: Ambang Batas (Threshold), Umpan Balik Getaran & Status Interaktif
+  // ─────────────────────────────────────────────────────────────
+  const THRESHOLD = 1.5;
+  const [isInteracting, setIsInteracting] = useState<boolean>(false);
+  const [interactionStatus, setInteractionStatus] =
+    useState<string>("Normal (Stabil)");
+  const lastVibrateRef = useRef<number>(0);
+  const resetTimerRef = useRef<any>(null);
+
   useEffect(() => {
     if (!visible) return;
 
@@ -60,6 +71,30 @@ export const SensorModal: React.FC<SensorModalProps> = ({
         if (isActive) {
           subscription = Accelerometer.addListener((data) => {
             setSensorData(data);
+
+            // 2. Hitung Magnitude: Math.sqrt(x * x + y * y + z * z)
+            const { x, y, z } = data;
+            const magnitude = Math.sqrt(x * x + y * y + z * z);
+
+            // 3. Logika Threshold & Getar: Jika magnitude > 1.5, jalankan Vibration.vibrate(500)
+            if (magnitude > THRESHOLD) {
+              const now = Date.now();
+              if (now - lastVibrateRef.current > 800) {
+                lastVibrateRef.current = now;
+                Vibration.vibrate(500); // Memicu umpan balik getaran 500ms
+              }
+
+              setIsInteracting(true);
+              setInteractionStatus(`Guncangan! (${magnitude.toFixed(2)}G > ${THRESHOLD}G)`);
+
+              if (resetTimerRef.current) {
+                clearTimeout(resetTimerRef.current);
+              }
+              resetTimerRef.current = setTimeout(() => {
+                setIsInteracting(false);
+                setInteractionStatus("Normal (Stabil)");
+              }, 1500);
+            }
           });
         }
       } catch (err) {
@@ -73,6 +108,9 @@ export const SensorModal: React.FC<SensorModalProps> = ({
     return () => {
       if (subscription) {
         subscription.remove();
+      }
+      if (resetTimerRef.current) {
+        clearTimeout(resetTimerRef.current);
       }
     };
   }, [visible, isActive, intervalMs]);
@@ -152,6 +190,52 @@ export const SensorModal: React.FC<SensorModalProps> = ({
             contentContainerStyle={styles.modalScrollContent}
             showsVerticalScrollIndicator={false}
           >
+            {/* Banner Status Interaktif & Threshold Feedback (Task 3) */}
+            <View
+              style={[
+                styles.interactionBanner,
+                {
+                  backgroundColor: isInteracting ? "#FFEBEE" : "#F0FDF4",
+                  borderColor: isInteracting ? "#EF5350" : "#BBF7D0",
+                },
+              ]}
+            >
+              <View style={styles.interactionLeftRow}>
+                <MaterialCommunityIcons
+                  name={isInteracting ? "vibrate" : "shield-check-outline"}
+                  size={22}
+                  color={isInteracting ? "#D32F2F" : "#16A34A"}
+                />
+                <View style={{ flex: 1, marginLeft: 8 }}>
+                  <Text
+                    style={[
+                      styles.interactionTitle,
+                      { color: isInteracting ? "#D32F2F" : "#16A34A" },
+                    ]}
+                  >
+                    {isInteracting
+                      ? "Peringatan: Guncangan Terdeteksi!"
+                      : "Status Sensor: Stabil"}
+                  </Text>
+                  <Text style={styles.interactionSubtitle}>
+                    {isInteracting
+                      ? `Magnitudo: ${totalG.toFixed(2)}G > ${THRESHOLD}G (Vibration 500ms Aktif)`
+                      : `Ambang batas getar: ${THRESHOLD}G (Tenang)`}
+                  </Text>
+                </View>
+              </View>
+              <View
+                style={[
+                  styles.interactionBadge,
+                  { backgroundColor: isInteracting ? "#D32F2F" : "#16A34A" },
+                ]}
+              >
+                <Text style={styles.interactionBadgeText}>
+                  {isInteracting ? "TRIGGERED" : "READY"}
+                </Text>
+              </View>
+            </View>
+
             {/* Status & Kontrol */}
             <View style={styles.statusBox}>
               <View style={styles.statusRow}>
@@ -182,8 +266,26 @@ export const SensorModal: React.FC<SensorModalProps> = ({
             {/* 2. Format Desimal: Terapkan .toFixed(2) pada nilai sumbu X, Y, dan Z */}
             <View style={styles.card}>
               <Text style={styles.cardSectionTitle}>
-                Koordinat Sumbu (Nilai Numerik)
+                Koordinat Sumbu (.toFixed(2))
               </Text>
+
+              {/* Numerical Quick Summary */}
+              <View style={styles.numericSummaryRow}>
+                <View style={styles.numericSummaryCol}>
+                  <Text style={styles.numericAxisTag}>Sumbu X</Text>
+                  <Text style={styles.numericValueBold}>{sensorData.x.toFixed(2)}</Text>
+                </View>
+                <View style={styles.numericDivider} />
+                <View style={styles.numericSummaryCol}>
+                  <Text style={styles.numericAxisTag}>Sumbu Y</Text>
+                  <Text style={styles.numericValueBold}>{sensorData.y.toFixed(2)}</Text>
+                </View>
+                <View style={styles.numericDivider} />
+                <View style={styles.numericSummaryCol}>
+                  <Text style={styles.numericAxisTag}>Sumbu Z</Text>
+                  <Text style={styles.numericValueBold}>{sensorData.z.toFixed(2)}</Text>
+                </View>
+              </View>
 
               {/* Sumbu X */}
               <View style={styles.axisCard}>
@@ -369,6 +471,41 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     paddingBottom: 28,
   },
+  interactionBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1.5,
+    marginBottom: Spacing.md,
+  },
+  interactionLeftRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  interactionTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  interactionSubtitle: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  interactionBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginLeft: 8,
+  },
+  interactionBadgeText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: Colors.white,
+    letterSpacing: 0.5,
+  },
   statusBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -425,6 +562,38 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: Colors.textPrimary,
     marginBottom: 12,
+  },
+  numericSummaryRow: {
+    flexDirection: "row",
+    backgroundColor: "#F8FAFC",
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    paddingVertical: 10,
+    marginBottom: 12,
+    justifyContent: "space-around",
+    alignItems: "center",
+  },
+  numericSummaryCol: {
+    alignItems: "center",
+    flex: 1,
+  },
+  numericAxisTag: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: Colors.textSecondary,
+    marginBottom: 2,
+  },
+  numericValueBold: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: Colors.primary,
+    fontFamily: Platform.select({ ios: "Courier", default: "monospace" }),
+  },
+  numericDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: "#E2E8F0",
   },
   axisCard: {
     marginBottom: 14,
@@ -519,4 +688,3 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
 });
-
