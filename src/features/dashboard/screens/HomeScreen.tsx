@@ -29,6 +29,7 @@ import {
 import { BalanceCard } from "../components/BalanceCard";
 import { FinanceSummary } from "../components/FinanceSummary";
 import { InfoScreen } from "./InfoScreen";
+import { SensorModal, SensorScreen } from "@/features/sensor";
 import { apiService } from "@/services";
 import { TransactionDTO } from "@/models";
 import { Accelerometer } from "expo-sensors";
@@ -54,6 +55,7 @@ export const HomeScreen: React.FC = () => {
     setActiveTab,
   } = useApp();
 
+  const [isSensorModalVisible, setIsSensorModalVisible] = useState<boolean>(false);
   const [isProfileModalVisible, setIsProfileModalVisible] =
     useState<boolean>(false);
   const [isPeriodModalVisible, setIsPeriodModalVisible] =
@@ -71,24 +73,29 @@ export const HomeScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState<boolean>(false);
 
   // ─────────────────────────────────────────────────────────────
-  // Task 1: Integrasi Sensor Akselerometer di Balik Layar
   // ─────────────────────────────────────────────────────────────
-  const [accelerometerData, setAccelerometerData] = useState<{
+  // Task 1 & 2: State Management Data Sensor: koordinat { x, y, z }
+  // ─────────────────────────────────────────────────────────────
+  const [sensorData, setSensorData] = useState<{
     x: number;
     y: number;
     z: number;
   }>({ x: 0, y: 0, z: 0 });
+
+  // Alias untuk kompatibilitas
+  const accelerometerData = sensorData;
+  const setAccelerometerData = setSensorData;
 
   useEffect(() => {
     // 1. Atur interval pembaruan ke 100ms
     Accelerometer.setUpdateInterval(100);
 
     // 2. Tambahkan listener untuk menangkap nilai x, y, dan z
-    const subscription = Accelerometer.addListener((sensorData) => {
-      setAccelerometerData({
-        x: Number(sensorData.x.toFixed(3)),
-        y: Number(sensorData.y.toFixed(3)),
-        z: Number(sensorData.z.toFixed(3)),
+    const subscription = Accelerometer.addListener((data) => {
+      setSensorData({
+        x: data.x,
+        y: data.y,
+        z: data.z,
       });
     });
 
@@ -369,6 +376,14 @@ export const HomeScreen: React.FC = () => {
             onPressProfile={() => setIsProfileModalVisible(true)}
             onPressNotification={handleNotificationPress}
             hasUnreadNotification={hasUnreadNotification}
+          />
+        </View>
+      ) : activeTab === "sensor" ? (
+        <View style={{ flex: 1 }}>
+          <SensorScreen
+            showHeader={false}
+            showBottomNav={false}
+            onClose={() => setActiveTab("home")}
           />
         </View>
       ) : (
@@ -652,7 +667,13 @@ export const HomeScreen: React.FC = () => {
         </TouchableWithoutFeedback>
       </Modal>
 
-      {/* Bottom Sheet / Modal: Ganti Profil */}
+      {/* Modal Sensor Akselerometer (Task 2) */}
+      <SensorModal
+        visible={isSensorModalVisible}
+        onClose={() => setIsSensorModalVisible(false)}
+      />
+
+      {/* Bottom Sheet / Modal: Ganti Profil */} 
       <ProfileModal
         visible={isProfileModalVisible}
         onClose={() => setIsProfileModalVisible(false)}

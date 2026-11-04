@@ -18,28 +18,45 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-interface AccelerometerData {
-  x: number;
-  y: number;
-  z: number;
+export interface SensorScreenProps {
+  showHeader?: boolean;
+  showBottomNav?: boolean;
+  onClose?: () => void;
 }
 
-export const SensorScreen: React.FC = () => {
+export const SensorScreen: React.FC<SensorScreenProps> = ({
+  showHeader = true,
+  showBottomNav = true,
+  onClose,
+}) => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { currentProfile, activeTab, setActiveTab } = useApp();
 
   // ─────────────────────────────────────────────────────────────
-  // State Akselerometer & Kontrol Sensor
+  // 1. State Management Data Sensor: koordinat { x, y, z }
   // ─────────────────────────────────────────────────────────────
-  const [data, setData] = useState<AccelerometerData>({ x: 0, y: 0, z: 0 });
+  const [sensorData, setSensorData] = useState<{
+    x: number;
+    y: number;
+    z: number;
+  }>({
+    x: 0,
+    y: 0,
+    z: 0,
+  });
+
+  // Alias kompatibilitas
+  const data = sensorData;
+  const setData = setSensorData;
+
   const [isActive, setIsActive] = useState<boolean>(true);
   const [intervalMs, setIntervalMs] = useState<number>(100); // Default: 100ms
   const [shakeCount, setShakeCount] = useState<number>(0);
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
 
   // ─────────────────────────────────────────────────────────────
-  // 1 & 2. Impor Sensor & Listener dengan Update Interval 100ms
+  // Listener & Update Interval (100ms)
   // ─────────────────────────────────────────────────────────────
   useEffect(() => {
     let subscription: { remove: () => void } | null = null;
@@ -54,20 +71,20 @@ export const SensorScreen: React.FC = () => {
           return;
         }
 
-        // Atur update interval ke 100ms sesuai instruksi task
+        // Atur update interval ke 100ms
         Accelerometer.setUpdateInterval(intervalMs);
 
         if (isActive) {
-          subscription = Accelerometer.addListener((accelerometerData) => {
-            setData(accelerometerData);
+          subscription = Accelerometer.addListener((accelerometerMeasurement) => {
+            setSensorData(accelerometerMeasurement);
 
-            // Deteksi guncangan sederhana (shake detection) jika total akselerasi > 1.75g
-            const totalG = Math.sqrt(
-              accelerometerData.x * accelerometerData.x +
-              accelerometerData.y * accelerometerData.y +
-              accelerometerData.z * accelerometerData.z
+            // Deteksi guncangan sederhana jika total akselerasi > 1.75g
+            const totalGVal = Math.sqrt(
+              accelerometerMeasurement.x * accelerometerMeasurement.x +
+              accelerometerMeasurement.y * accelerometerMeasurement.y +
+              accelerometerMeasurement.z * accelerometerMeasurement.z
             );
-            if (totalG > 1.75) {
+            if (totalGVal > 1.75) {
               setShakeCount((prev) => prev + 1);
             }
           });
@@ -89,12 +106,16 @@ export const SensorScreen: React.FC = () => {
 
   // Kalkulasi magnitudo percepatan total (Normal gravitasi bumi ~ 1.00g)
   const totalG = useMemo(() => {
-    return Math.sqrt(data.x * data.x + data.y * data.y + data.z * data.z);
-  }, [data]);
+    return Math.sqrt(
+      sensorData.x * sensorData.x +
+      sensorData.y * sensorData.y +
+      sensorData.z * sensorData.z
+    );
+  }, [sensorData]);
 
   // Deteksi orientasi perangkat berbasis nilai sumbu x, y, z
   const orientationText = useMemo(() => {
-    const { x, y, z } = data;
+    const { x, y, z } = sensorData;
     if (Math.abs(z) > 0.85) {
       return z > 0 ? "Datar (Menghadap Atas)" : "Datar (Menghadap Bawah)";
     }
@@ -105,13 +126,17 @@ export const SensorScreen: React.FC = () => {
       return x > 0 ? "Lanskap (Miring Kiri)" : "Lanskap (Miring Kanan)";
     }
     return "Miring / Dinamis";
-  }, [data]);
+  }, [sensorData]);
 
   // Navigasi Bottom Bar
   const handleTabSelect = (tab: TabType) => {
     setActiveTab(tab);
     if (tab === "home") {
-      router.replace("/" as any);
+      if (onClose) {
+        onClose();
+      } else {
+        router.replace("/" as any);
+      }
     } else if (tab === "finance") {
       router.push("/finance" as any);
     } else if (tab === "schedule") {
@@ -122,6 +147,10 @@ export const SensorScreen: React.FC = () => {
   };
 
   const handleBack = () => {
+    if (onClose) {
+      onClose();
+      return;
+    }
     setActiveTab("home");
     if (router.canGoBack()) {
       router.back();
@@ -138,38 +167,40 @@ export const SensorScreen: React.FC = () => {
 
   return (
     <View style={styles.root}>
-      <StatusBar style="light" />
+      {showHeader && <StatusBar style="light" />}
 
       {/* Header Sensor Screen */}
-      <View
-        style={[
-          styles.headerContainer,
-          { paddingTop: Math.max(insets.top, 12) + 8 },
-        ]}
-      >
-        <View style={styles.headerRow}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.backButton,
-              pressed && styles.pressedState,
-            ]}
-            onPress={handleBack}
-            accessibilityRole="button"
-            accessibilityLabel="Kembali ke Beranda"
-          >
-            <Ionicons name="arrow-back" size={24} color={Colors.white} />
-          </Pressable>
+      {showHeader && (
+        <View
+          style={[
+            styles.headerContainer,
+            { paddingTop: Math.max(insets.top, 12) + 8 },
+          ]}
+        >
+          <View style={styles.headerRow}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.backButton,
+                pressed && styles.pressedState,
+              ]}
+              onPress={handleBack}
+              accessibilityRole="button"
+              accessibilityLabel="Kembali ke Beranda"
+            >
+              <Ionicons name="arrow-back" size={24} color={Colors.white} />
+            </Pressable>
 
-          <View style={styles.headerTitleCenter}>
-            <Text style={styles.headerMainTitle}>Sensor Akselerometer</Text>
-            <Text style={styles.headerSubtitle}>Real-time Hardware Telemetry</Text>
-          </View>
+            <View style={styles.headerTitleCenter}>
+              <Text style={styles.headerMainTitle}>Sensor Akselerometer</Text>
+              <Text style={styles.headerSubtitle}>Real-time Hardware Telemetry</Text>
+            </View>
 
-          <View style={styles.logoBadgeWrapper}>
-            <BrandLogo size="small" />
+            <View style={styles.logoBadgeWrapper}>
+              <BrandLogo size="small" />
+            </View>
           </View>
         </View>
-      </View>
+      )}
 
       {/* Konten Sensor */}
       <ScrollView
@@ -280,9 +311,27 @@ export const SensorScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* Card Pengukuran Sumbu X, Y, Z */}
+        {/* 2. Format Desimal: Terapkan .toFixed(2) pada nilai sumbu X, Y, dan Z */}
         <View style={styles.card}>
-          <Text style={styles.sectionHeader}>Koordinat Akselerasi 3-Axis</Text>
+          <Text style={styles.sectionHeader}>Koordinat Akselerasi 3-Axis (.toFixed(2))</Text>
+
+          {/* Numerical Quick Summary */}
+          <View style={styles.numericSummaryRow}>
+            <View style={styles.numericSummaryCol}>
+              <Text style={styles.numericAxisTag}>Sumbu X</Text>
+              <Text style={styles.numericValueBold}>{sensorData.x.toFixed(2)}</Text>
+            </View>
+            <View style={styles.numericDivider} />
+            <View style={styles.numericSummaryCol}>
+              <Text style={styles.numericAxisTag}>Sumbu Y</Text>
+              <Text style={styles.numericValueBold}>{sensorData.y.toFixed(2)}</Text>
+            </View>
+            <View style={styles.numericDivider} />
+            <View style={styles.numericSummaryCol}>
+              <Text style={styles.numericAxisTag}>Sumbu Z</Text>
+              <Text style={styles.numericValueBold}>{sensorData.z.toFixed(2)}</Text>
+            </View>
+          </View>
 
           {/* Sumbu X */}
           <View style={styles.axisItem}>
@@ -292,7 +341,7 @@ export const SensorScreen: React.FC = () => {
               </View>
               <Text style={styles.axisDirectionText}>Horizontal (Kiri - Kanan)</Text>
               <Text style={styles.axisValue}>
-                {data.x >= 0 ? `+${data.x.toFixed(3)}` : data.x.toFixed(3)} g
+                {sensorData.x >= 0 ? `+${sensorData.x.toFixed(2)}` : sensorData.x.toFixed(2)} g
               </Text>
             </View>
             <View style={styles.meterTrack}>
@@ -300,7 +349,7 @@ export const SensorScreen: React.FC = () => {
                 style={[
                   styles.meterFill,
                   {
-                    width: `${getAxisPercentage(data.x)}%`,
+                    width: `${getAxisPercentage(sensorData.x)}%`,
                     backgroundColor: "#1976D2",
                   },
                 ]}
@@ -319,7 +368,7 @@ export const SensorScreen: React.FC = () => {
               </View>
               <Text style={styles.axisDirectionText}>Vertikal (Atas - Bawah)</Text>
               <Text style={styles.axisValue}>
-                {data.y >= 0 ? `+${data.y.toFixed(3)}` : data.y.toFixed(3)} g
+                {sensorData.y >= 0 ? `+${sensorData.y.toFixed(2)}` : sensorData.y.toFixed(2)} g
               </Text>
             </View>
             <View style={styles.meterTrack}>
@@ -327,7 +376,7 @@ export const SensorScreen: React.FC = () => {
                 style={[
                   styles.meterFill,
                   {
-                    width: `${getAxisPercentage(data.y)}%`,
+                    width: `${getAxisPercentage(sensorData.y)}%`,
                     backgroundColor: "#2E7D32",
                   },
                 ]}
@@ -346,7 +395,7 @@ export const SensorScreen: React.FC = () => {
               </View>
               <Text style={styles.axisDirectionText}>Kedalaman (Depan - Belakang)</Text>
               <Text style={styles.axisValue}>
-                {data.z >= 0 ? `+${data.z.toFixed(3)}` : data.z.toFixed(3)} g
+                {sensorData.z >= 0 ? `+${sensorData.z.toFixed(2)}` : sensorData.z.toFixed(2)} g
               </Text>
             </View>
             <View style={styles.meterTrack}>
@@ -354,7 +403,7 @@ export const SensorScreen: React.FC = () => {
                 style={[
                   styles.meterFill,
                   {
-                    width: `${getAxisPercentage(data.z)}%`,
+                    width: `${getAxisPercentage(sensorData.z)}%`,
                     backgroundColor: "#E65100",
                   },
                 ]}
@@ -386,7 +435,7 @@ export const SensorScreen: React.FC = () => {
             />
             <Text style={styles.gridCardLabel}>Total Vektor (G)</Text>
             <Text style={styles.gridCardValue}>
-              {totalG.toFixed(3)} g
+              {totalG.toFixed(2)} g
             </Text>
           </View>
 
@@ -409,15 +458,17 @@ export const SensorScreen: React.FC = () => {
           </View>
           <Text style={styles.infoBody}>
             Nilai akselerasi direpresentasikan dalam percepatan gravitasi bumi{" "}
-            <Text style={styles.boldText}>(1 g ≈ 9.81 m/s²)</Text>. Saat perangkat diam di
-            atas meja datar, nilai Sumbu Z akan bernilai mendekati +1.0 g karena
-            gaya gravitasi bumi.
+            <Text style={styles.boldText}>(1 g ≈ 9.81 m/s²)</Text>. Setiap sumbu
+            diformat bersih menggunakan <Text style={styles.boldText}>.toFixed(2)</Text>{" "}
+            untuk kemudahan pemantauan real-time.
           </Text>
         </View>
       </ScrollView>
 
       {/* Bilah Navigasi Bawah */}
-      <BottomNavBar activeTab="sensor" onSelectTab={handleTabSelect} />
+      {showBottomNav && (
+        <BottomNavBar activeTab="sensor" onSelectTab={handleTabSelect} />
+      )}
     </View>
   );
 };
@@ -591,6 +642,38 @@ const styles = StyleSheet.create({
   intervalPillTextActive: {
     color: Colors.white,
   },
+  numericSummaryRow: {
+    flexDirection: "row",
+    backgroundColor: "#F8FAFC",
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    paddingVertical: 12,
+    marginBottom: Spacing.md,
+    justifyContent: "space-around",
+    alignItems: "center",
+  },
+  numericSummaryCol: {
+    alignItems: "center",
+    flex: 1,
+  },
+  numericAxisTag: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: Colors.textSecondary,
+    marginBottom: 2,
+  },
+  numericValueBold: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: Colors.primary,
+    fontFamily: Platform.select({ ios: "Courier", default: "monospace" }),
+  },
+  numericDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: "#E2E8F0",
+  },
   sectionHeader: {
     fontSize: 14,
     fontWeight: "700",
@@ -624,7 +707,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   axisValue: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "700",
     fontFamily: Platform.select({ ios: "Courier", default: "monospace" }),
     color: Colors.textPrimary,
