@@ -74,6 +74,7 @@ export const HomeScreen: React.FC = () => {
   // ─────────────────────────────────────────────────────────────
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setErrorMessage] = useState<string | null>(null);
+  const [isOffline, setIsOffline] = useState<boolean>(false);
   const [apiTransactions, setApiTransactions] = useState<TransactionDTO[]>([]);
 
   // Tetap sinkronkan isLoadingApi untuk kompatibilitas tampilan
@@ -89,16 +90,23 @@ export const HomeScreen: React.FC = () => {
     return `Rp ${formatted},00`;
   };
 
-  // Hook useCallback untuk fungsi pemanggil API dengan state Loading & Error (Task 1 & 2)
+  // Hook useCallback untuk fungsi pemanggil API dengan penanganan Loading, Error, & Offline (Task 1, 2, 3)
   const loadApiData = useCallback(async () => {
     try {
       setLoading(true);
       setErrorMessage(null);
+      setIsOffline(false);
 
-      // 1. Panggil fungsi REST API transaksi VORFÍNE (Task 2)
+      // 1. Deteksi Koneksi Proaktif sebelum request (Task 3)
+      const isConnected = await apiService.checkConnection();
+      if (!isConnected) {
+        throw new TypeError("Failed to fetch: Perangkat dalam kondisi offline");
+      }
+
+      // 2. Panggil fungsi REST API transaksi VORFÍNE (Task 2)
       const rawTransactions = await apiService.fetchTransactions();
 
-      // 2. Gunakan metode .map() untuk menyesuaikan field server agar cocok dengan struktur DTO (Task 1)
+      // 3. Gunakan metode .map() untuk menyesuaikan field server agar cocok dengan struktur DTO (Task 1)
       const mappedTransactions: TransactionDTO[] = rawTransactions.map(
         (item: any) => ({
           id: String(item.id),
@@ -115,10 +123,24 @@ export const HomeScreen: React.FC = () => {
 
       setApiTransactions(mappedTransactions);
       setErrorMessage(null);
+      setIsOffline(false);
     } catch (err: any) {
       console.error("Gagal memuat data API pada Dashboard:", err);
-      setErrorMessage(err?.message || "Terjadi kesalahan saat memuat data.");
-      // Sembunyikan data jika terjadi kegagalan (Task 2: sembunyikan data saat error)
+
+      // 1. Deteksi Koneksi / Penangkapan Error Jaringan (Task 3)
+      const isNetOffline = apiService.isNetworkError(err);
+      setIsOffline(isNetOffline);
+
+      if (isNetOffline) {
+        // 2. Tampilan Pesan Offline Khusus (Task 3)
+        setErrorMessage(
+          "Tidak ada koneksi internet. Periksa koneksi Anda dan coba lagi."
+        );
+      } else {
+        setErrorMessage(err?.message || "Terjadi kesalahan saat memuat data.");
+      }
+
+      // Sembunyikan data jika terjadi kegagalan (Task 2 & 3: data tidak ditampilkan saat error/offline)
       setApiTransactions([]);
     } finally {
       // Pastikan setLoading(false) dijalankan di dalam blok finally agar tidak infinite loading
@@ -129,6 +151,31 @@ export const HomeScreen: React.FC = () => {
   // Panggil loadApiData saat komponen pertama kali dimuat
   useEffect(() => {
     loadApiData();
+  }, [loadApiData]);
+
+  // Listener perubahan status koneksi (Offline / Online) untuk pemulihan real-time (Task 3)
+  useEffect(() => {
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      const handleOnline = () => {
+        setIsOffline(false);
+        loadApiData();
+      };
+      const handleOffline = () => {
+        setIsOffline(true);
+        setErrorMessage(
+          "Tidak ada koneksi internet. Periksa koneksi Anda dan coba lagi."
+        );
+        setApiTransactions([]);
+      };
+
+      window.addEventListener("online", handleOnline);
+      window.addEventListener("offline", handleOffline);
+
+      return () => {
+        window.removeEventListener("online", handleOnline);
+        window.removeEventListener("offline", handleOffline);
+      };
+    }
   }, [loadApiData]);
 
   // Helper feedback
@@ -384,26 +431,54 @@ export const HomeScreen: React.FC = () => {
                   </Text>
                 </View>
               ) : error !== null ? (
-                /* 2. Pesan Error & Tombol Retry: Jika terjadi kegagalan (error !== null) */
-                <View style={styles.errorTransCard}>
-                  <View style={styles.errorIconCircle}>
-                    <Ionicons name="alert-circle-outline" size={24} color="#DC2626" />
+                /* 2. Pesan Error / Offline & Tombol Retry: Jika terjadi kegagalan (Task 2 & 3) */
+                <View
+                  style={[
+                    styles.errorTransCard,
+                    isOffline && styles.offlineTransCard,
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.errorIconCircle,
+                      isOffline && styles.offlineIconCircle,
+                    ]}
+                  >
+                    <Ionicons
+                      name={isOffline ? "cloud-offline-outline" : "alert-circle-outline"}
+                      size={24}
+                      color={isOffline ? "#D97706" : "#DC2626"}
+                    />
                   </View>
-                  <Text style={styles.errorTitleText}>Gagal Memuat Data</Text>
+                  <Text
+                    style={[
+                      styles.errorTitleText,
+                      isOffline && styles.offlineTitleText,
+                    ]}
+                  >
+                    {isOffline ? "Tidak Ada Koneksi Internet" : "Gagal Memuat Data"}
+                  </Text>
                   <Text style={styles.errorMessageText}>
-                    {error.includes("HTTP")
-                      ? `Terjadi kesalahan respon server (${error}). Periksa koneksi backend atau coba kembali.`
-                      : error}
+                    {isOffline
+                      ? "Tidak ada koneksi internet. Periksa koneksi Anda dan coba lagi."
+                      : error.includes("HTTP")
+                        ? `Terjadi kesalahan respon server (${error}). Periksa koneksi backend atau coba kembali.`
+                        : error}
                   </Text>
                   {/* 3. Fungsi Retry: Tombol Coba Lagi memicu kembali pemanggil API */}
                   <Pressable
                     style={({ pressed }) => [
                       styles.retryButton,
+                      isOffline && styles.offlineRetryButton,
                       pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] },
                     ]}
                     onPress={loadApiData}
                     accessibilityRole="button"
-                    accessibilityLabel="Coba Lagi memuat data transaksi"
+                    accessibilityLabel={
+                      isOffline
+                        ? "Coba Lagi menghubungkan ke internet"
+                        : "Coba Lagi memuat data transaksi"
+                    }
                   >
                     <Ionicons name="reload-outline" size={15} color="#FFFFFF" />
                     <Text style={styles.retryButtonText}>Coba Lagi</Text>
@@ -696,6 +771,19 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontSize: 12.5,
     fontWeight: "700",
+  },
+  offlineTransCard: {
+    backgroundColor: "#FFFBEB",
+    borderColor: "#FDE68A",
+  },
+  offlineIconCircle: {
+    backgroundColor: "#FEF3C7",
+  },
+  offlineTitleText: {
+    color: "#B45309",
+  },
+  offlineRetryButton: {
+    backgroundColor: Colors.primary,
   },
   emptyTransCard: {
     backgroundColor: Colors.white,

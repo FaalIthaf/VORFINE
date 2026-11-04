@@ -63,6 +63,44 @@ async function parseJsonResponse(response: Response): Promise<any> {
 }
 
 /**
+ * Memeriksa status koneksi internet perangkat secara proaktif (Task 3)
+ */
+export async function checkConnection(): Promise<boolean> {
+  if (typeof navigator !== "undefined" && typeof navigator.onLine === "boolean") {
+    return navigator.onLine;
+  }
+  return true;
+}
+
+/**
+ * Mendeteksi apakah error yang ditangkap merupakan kegagalan jaringan atau kondisi offline (Task 3)
+ */
+export function isNetworkError(error: any): boolean {
+  if (typeof navigator !== "undefined" && typeof navigator.onLine === "boolean" && !navigator.onLine) {
+    return true;
+  }
+  if (!error) return false;
+
+  const msg = (error.message || (typeof error === "string" ? error : "")).toLowerCase();
+  const name = (error.name || "").toLowerCase();
+
+  return (
+    (name === "typeerror" && (msg.includes("fetch") || msg.includes("network"))) ||
+    msg.includes("failed to fetch") ||
+    msg.includes("network request failed") ||
+    msg.includes("networkerror") ||
+    msg.includes("network error") ||
+    msg.includes("koneksi") ||
+    msg.includes("offline") ||
+    msg.includes("internet") ||
+    msg.includes("econnrefused") ||
+    msg.includes("enotfound") ||
+    msg.includes("net::err") ||
+    msg.includes("the internet connection appears to be offline")
+  );
+}
+
+/**
  * Helper generik untuk melakukan HTTP GET request menggunakan fetch() (Task 2)
  * Mengambil token dari SecureStore dan menyertakannya di dalam header HTTP:
  * Authorization: Bearer <token>
@@ -305,6 +343,8 @@ export const apiService = {
   registerUser,
   getStoredAccessToken,
   removeStoredAccessToken,
+  checkConnection,
+  isNetworkError,
 };
 
 export default apiService;
