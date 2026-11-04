@@ -68,7 +68,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
           {activeTab === "finance" && <View style={styles.activeIndicator} />}
         </Pressable>
 
-        {/* Tab 3: Jadwal */}
+        {/* Tab 3: Jadwal (Kalender) */}
         <Pressable
           style={({ pressed }) => [
             styles.tabButton,
@@ -77,7 +77,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
           onPress={() => onSelectTab("schedule")}
           accessibilityRole="tab"
           accessibilityState={{ selected: activeTab === "schedule" }}
-          accessibilityLabel="Jadwal"
+          accessibilityLabel="Jadwal Kalender"
         >
           <MaterialCommunityIcons
             name="calendar-month-outline"
@@ -88,7 +88,27 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
           {activeTab === "schedule" && <View style={styles.activeIndicator} />}
         </Pressable>
 
-        {/* Tab 4: Menu / Info & Changelog (Icon Grid 4 Kotak) */}
+        {/* Tab 4: Sensor Akselerometer (Di sebelah tombol menu kalender, kanan bawah) */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.tabButton,
+            pressed && styles.pressedState,
+          ]}
+          onPress={() => onSelectTab("sensor")}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeTab === "sensor" }}
+          accessibilityLabel="Sensor Akselerometer"
+        >
+          <MaterialCommunityIcons
+            name="motion-sensor"
+            size={28}
+            color={Colors.white}
+            style={{ opacity: activeTab === "sensor" ? 1 : 0.65 }}
+          />
+          {activeTab === "sensor" && <View style={styles.activeIndicator} />}
+        </Pressable>
+
+        {/* Tab 5: Menu / Info & Changelog (Icon Grid 4 Kotak) */}
         <Pressable
           style={({ pressed }) => [
             styles.tabButton,
@@ -128,15 +148,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: Spacing.sm,
   },
   tabButton: {
     paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.xs + 2,
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
-    minWidth: 54,
+    minWidth: 48,
     minHeight: 38,
   },
   customIcon: {

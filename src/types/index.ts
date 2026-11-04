@@ -58,7 +58,7 @@ export interface FinanceData {
   yearlyBudget: number;
 }
 
-export type TabType = "home" | "finance" | "schedule" | "menu";
+export type TabType = "home" | "finance" | "schedule" | "sensor" | "menu";
 
 export type TransactionType = "income" | "expense";
 

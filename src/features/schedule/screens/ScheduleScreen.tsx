@@ -90,6 +90,8 @@ export const ScheduleScreen: React.FC = () => {
       router.replace("/" as any);
     } else if (tab === "finance") {
       router.push("/finance" as any);
+    } else if (tab === "sensor") {
+      router.push("/sensor" as any);
     } else if (tab === "menu") {
       router.replace("/" as any);
     }

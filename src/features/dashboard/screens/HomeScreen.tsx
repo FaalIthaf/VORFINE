@@ -31,6 +31,7 @@ import { FinanceSummary } from "../components/FinanceSummary";
 import { InfoScreen } from "./InfoScreen";
 import { apiService } from "@/services";
 import { TransactionDTO } from "@/models";
+import { Accelerometer } from "expo-sensors";
 
 export const HomeScreen: React.FC = () => {
   const router = useRouter();
@@ -68,6 +69,34 @@ export const HomeScreen: React.FC = () => {
     useState<boolean>(true);
 
   const [refreshing, setRefreshing] = useState<boolean>(false);
+
+  // ─────────────────────────────────────────────────────────────
+  // Task 1: Integrasi Sensor Akselerometer di Balik Layar
+  // ─────────────────────────────────────────────────────────────
+  const [accelerometerData, setAccelerometerData] = useState<{
+    x: number;
+    y: number;
+    z: number;
+  }>({ x: 0, y: 0, z: 0 });
+
+  useEffect(() => {
+    // 1. Atur interval pembaruan ke 100ms
+    Accelerometer.setUpdateInterval(100);
+
+    // 2. Tambahkan listener untuk menangkap nilai x, y, dan z
+    const subscription = Accelerometer.addListener((sensorData) => {
+      setAccelerometerData({
+        x: Number(sensorData.x.toFixed(3)),
+        y: Number(sensorData.y.toFixed(3)),
+        z: Number(sensorData.z.toFixed(3)),
+      });
+    });
+
+    // 3. Cleanup listener saat komponen di-unmount
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   // ─────────────────────────────────────────────────────────────
   // Task 1: State penampung error dan status loading (Error Handling)
@@ -209,6 +238,8 @@ export const HomeScreen: React.FC = () => {
       router.push("/schedule" as any);
     } else if (tab === "finance") {
       router.push("/finance" as any);
+    } else if (tab === "sensor") {
+      router.push("/sensor" as any);
     }
   };
 

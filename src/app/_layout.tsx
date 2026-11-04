@@ -82,6 +82,7 @@ export default function RootLayout() {
               {/* Fitur Utama */}
               <Stack.Screen name="finance" options={{ title: "Keuangan" }} />
               <Stack.Screen name="schedule" options={{ title: "Jadwal" }} />
+              <Stack.Screen name="sensor" options={{ title: "Sensor Akselerometer" }} />
               <Stack.Screen name="expense" options={{ title: "Detail Pengeluaran" }} />
               <Stack.Screen name="income" options={{ title: "Detail Pemasukan" }} />
               <Stack.Screen name="notifications" options={{ title: "Notifikasi" }} />

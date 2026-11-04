@@ -169,6 +169,8 @@ export const FinanceScreen: React.FC = () => {
       router.replace("/" as any);
     } else if (tab === "schedule") {
       router.push("/schedule" as any);
+    } else if (tab === "sensor") {
+      router.push("/sensor" as any);
     } else if (tab === "menu") {
       router.replace("/" as any);
     }
