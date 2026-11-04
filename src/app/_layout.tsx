@@ -7,33 +7,37 @@ import { ActivityIndicator, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 /**
- * Auth Guard component:
- * - Prevents unauthenticated access to the dashboard and internal screens.
- * - Redirects new users to /auth/register and returning users to /auth/login.
- * - Redirects authenticated users away from login/register pages back to the dashboard.
+ * Auth Guard component (Task 3: Session Protection):
+ * - Memastikan aplikasi mengecek keberadaan token saat pertama kali dibuka.
+ * - Jika tidak ada token yang valid / tidak terautentikasi, arahkan pengguna langsung ke halaman /login.
+ * - Mencegah akses ke halaman utama/dashboard tanpa token yang sah.
+ * - Mengembalikan pengguna terautentikasi yang mencoba mengakses halaman login/register kembali ke dashboard.
  */
 function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading, hasRegisteredUsers } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
-  const isAuthGroup = segments[0] === "auth";
-  const authSubpage = segments[1];
+  const firstSegment = (segments[0] as string | undefined) || "";
+  const authSubpage = (segments[1] as string | undefined) || "";
+
+  const isAuthGroup = firstSegment === "auth" || firstSegment === "login";
   // Subpages like "fingerprint" and "face-id" can be viewed while authenticated
   const isLoginPageOrRegister =
-    isAuthGroup &&
-    (authSubpage === "login" ||
-      authSubpage === "register" ||
-      authSubpage === undefined);
+    firstSegment === "login" ||
+    (firstSegment === "auth" &&
+      (authSubpage === "login" ||
+        authSubpage === "register" ||
+        authSubpage === ""));
 
   useEffect(() => {
     if (isLoading) return;
 
     if (!isAuthenticated && !isAuthGroup) {
-      // Unauthenticated user → always go to Login page first
-      router.replace("/auth/login" as any);
+      // Tidak ada token / belum terautentikasi → arahkan langsung ke halaman login
+      router.replace("/login" as any);
     } else if (isAuthenticated && isLoginPageOrRegister) {
-      // Authenticated user trying to access login/register
+      // Pengguna yang sudah terautentikasi → arahkan ke dashboard
       router.replace("/" as any);
     }
   }, [isAuthenticated, isLoading, isAuthGroup, isLoginPageOrRegister]);
@@ -82,7 +86,8 @@ export default function RootLayout() {
               <Stack.Screen name="notifications" options={{ title: "Notifikasi" }} />
               <Stack.Screen name="info" options={{ title: "Informasi Aplikasi" }} />
 
-              {/* Autentikasi */}
+              {/* Autentikasi (Task 3: Session Protection & Route Guard) */}
+              <Stack.Screen name="login" options={{ title: "Masuk Akun" }} />
               <Stack.Screen name="auth/login" options={{ title: "Masuk Akun" }} />
               <Stack.Screen name="auth/register" options={{ title: "Daftar Akun" }} />
               <Stack.Screen name="auth/fingerprint" options={{ title: "Verifikasi Sidik Jari" }} />

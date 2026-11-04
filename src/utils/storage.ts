@@ -15,6 +15,7 @@ export const STORAGE_KEYS = {
 
 // ─── Keys for sensitive data (stored in SecureStore) ─────────────────
 export const SECURE_KEYS = {
+  ACCESS_TOKEN: "access_token",
   SESSION_TOKEN: "vorfine_session_token",
   USER_DATA: "vorfine_user_data",
   REGISTERED_USERS: "vorfine_registered_users",

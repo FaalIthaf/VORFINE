@@ -5,4 +5,5 @@
 export * from "./TransactionDTO";
 export * from "./ActivityDTO";
 export * from "./ProgramDTO";
+export * from "./AuthDTO";
 

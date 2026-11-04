@@ -1,3 +1,4 @@
+import * as SecureStore from "expo-secure-store";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -331,14 +332,19 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                     <Text style={styles.switchAccountBtnText}>Ganti Akun</Text>
                   </Pressable>
 
-                  {/* Logout Button */}
+                  {/* Logout Button (Task 3: Session Protection & Logout) */}
                   <Pressable
                     style={[styles.logoutBtn]}
                     onPress={async () => {
                       onClose();
+                      try {
+                        await SecureStore.deleteItemAsync("access_token");
+                      } catch {}
                       await logout();
-                      router.replace("/auth/login" as any);
+                      router.replace("/login" as any);
                     }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Keluar atau logout dari akun"
                   >
                     <Ionicons name="log-out-outline" size={16} color="#DC2626" />
                     <Text style={styles.logoutBtnText}>
