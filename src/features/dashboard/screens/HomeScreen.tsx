@@ -10,7 +10,7 @@ import { TabType } from "@/types";
 import { parseAmountToNumber, parseTransactionDate } from "@/utils/dateUtils";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -89,79 +89,16 @@ export const HomeScreen: React.FC = () => {
     return `Rp ${formatted},00`;
   };
 
-  // Hook useEffect untuk memanggil fungsi API saat komponen pertama kali dimuat
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadApiData = async () => {
-      try {
-        setLoading(true);
-        setErrorMessage(null);
-
-        // 1. Panggil fungsi REST API transaksi VORFÍNE (Task 2)
-        const rawTransactions = await apiService.fetchTransactions();
-
-        if (!isMounted) return;
-
-        // 2. Gunakan metode .map() untuk menyesuaikan field server agar cocok dengan struktur DTO (Task 1)
-        const mappedTransactions: TransactionDTO[] = rawTransactions.map(
-          (item: any) => ({
-            id: String(item.id),
-            title: item.title,
-            amount: Number(item.amount) || 0,
-            type: item.type === "income" ? "income" : "expense",
-            category: item.category || "Umum",
-            date: item.date,
-            description: item.description || item.title,
-            status: item.status || "completed",
-            balanceAfter: item.balanceAfter,
-          })
-        );
-
-        setApiTransactions(mappedTransactions);
-        setErrorMessage(null);
-      } catch (err: any) {
-        console.error("Gagal memuat data API pada Dashboard:", err);
-        if (isMounted) {
-          setErrorMessage(err?.message || "Terjadi kesalahan saat memuat data.");
-          // Memastikan data tidak ditampilkan jika terjadi kegagalan
-          setApiTransactions([]);
-        }
-      } finally {
-        // Pastikan setLoading(false) dijalankan di dalam blok finally agar tidak infinite loading
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadApiData();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  // Helper feedback
-  const showFeedback = (msg: string) => {
-    if (Platform.OS === "android") {
-      ToastAndroid.show(msg, ToastAndroid.SHORT);
-    } else {
-      Alert.alert("VORFÍNE", msg);
-    }
-  };
-
-  const handleNotificationPress = () => {
-    router.push("/notifications" as any);
-  };
-
-  const onRefresh = React.useCallback(async () => {
-    setRefreshing(true);
-    setLoading(true);
-    setErrorMessage(null);
+  // Hook useCallback untuk fungsi pemanggil API dengan state Loading & Error (Task 1 & 2)
+  const loadApiData = useCallback(async () => {
     try {
+      setLoading(true);
+      setErrorMessage(null);
+
+      // 1. Panggil fungsi REST API transaksi VORFÍNE (Task 2)
       const rawTransactions = await apiService.fetchTransactions();
 
+      // 2. Gunakan metode .map() untuk menyesuaikan field server agar cocok dengan struktur DTO (Task 1)
       const mappedTransactions: TransactionDTO[] = rawTransactions.map(
         (item: any) => ({
           id: String(item.id),
@@ -178,17 +115,46 @@ export const HomeScreen: React.FC = () => {
 
       setApiTransactions(mappedTransactions);
       setErrorMessage(null);
-      showFeedback("Data transaksi VORFÍNE berhasil diperbarui");
     } catch (err: any) {
-      setErrorMessage(err?.message || "Gagal memperbarui data transaksi.");
-      // Memastikan data tidak ditampilkan jika terjadi kegagalan
+      console.error("Gagal memuat data API pada Dashboard:", err);
+      setErrorMessage(err?.message || "Terjadi kesalahan saat memuat data.");
+      // Sembunyikan data jika terjadi kegagalan (Task 2: sembunyikan data saat error)
       setApiTransactions([]);
-      showFeedback("Gagal memperbarui data: " + (err?.message || ""));
     } finally {
+      // Pastikan setLoading(false) dijalankan di dalam blok finally agar tidak infinite loading
       setLoading(false);
-      setRefreshing(false);
     }
   }, []);
+
+  // Panggil loadApiData saat komponen pertama kali dimuat
+  useEffect(() => {
+    loadApiData();
+  }, [loadApiData]);
+
+  // Helper feedback
+  const showFeedback = (msg: string) => {
+    if (Platform.OS === "android") {
+      ToastAndroid.show(msg, ToastAndroid.SHORT);
+    } else {
+      Alert.alert("VORFÍNE", msg);
+    }
+  };
+
+  const handleNotificationPress = () => {
+    router.push("/notifications" as any);
+  };
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadApiData();
+      showFeedback("Data transaksi VORFÍNE berhasil diperbarui");
+    } catch (err: any) {
+      showFeedback("Gagal memperbarui data: " + (err?.message || ""));
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadApiData]);
 
   const handleTabSelect = (tab: TabType) => {
     setActiveTab(tab);
@@ -206,6 +172,11 @@ export const HomeScreen: React.FC = () => {
       return transactions;
     }
 
+    // Jika terjadi kegagalan (error !== null), sembunyikan data API (Task 2)
+    if (error !== null) {
+      return [];
+    }
+
     // Jika belum ada data transaksi user, tampilkan data dinamis dari REST API VORFÍNE (Task 3)
     return apiTransactions.map((t) => ({
       id: `api-${t.id}`,
@@ -219,7 +190,7 @@ export const HomeScreen: React.FC = () => {
       rawDate: t.date,
       timestamp: new Date(t.date).getTime() || Date.now(),
     }));
-  }, [transactions, apiTransactions]);
+  }, [transactions, apiTransactions, error]);
 
   // 5. Multi-Period calculations for Harian, Bulanan, and Tahunan
   const now = new Date();
@@ -401,22 +372,45 @@ export const HomeScreen: React.FC = () => {
                 ></Pressable>
               </View>
 
-              {/* Status Loading Data API */}
-              {isLoadingApi && displayTransactions.length === 0 ? (
-                <View style={{ paddingVertical: 18, alignItems: "center" }}>
+              {/* 1. Indikator Loading: Saat proses fetch sedang berjalan (loading === true) */}
+              {loading && displayTransactions.length === 0 ? (
+                <View style={styles.loadingCard}>
                   <ActivityIndicator size="small" color={Colors.primary} />
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      color: Colors.textSecondary,
-                      marginTop: 6,
-                    }}
-                  >
-                    Memuat data transaksi dari server...
+                  <Text style={styles.loadingText}>
+                    Memuat data... Mohon tunggu sebentar
+                  </Text>
+                  <Text style={styles.loadingSubtext}>
+                    Sedang mengambil data transaksi dari server VORFÍNE
                   </Text>
                 </View>
-              ) : (
-                /* List Transaksi Terbaru — render data dinamis DTO */
+              ) : error !== null ? (
+                /* 2. Pesan Error & Tombol Retry: Jika terjadi kegagalan (error !== null) */
+                <View style={styles.errorTransCard}>
+                  <View style={styles.errorIconCircle}>
+                    <Ionicons name="alert-circle-outline" size={24} color="#DC2626" />
+                  </View>
+                  <Text style={styles.errorTitleText}>Gagal Memuat Data</Text>
+                  <Text style={styles.errorMessageText}>
+                    {error.includes("HTTP")
+                      ? `Terjadi kesalahan respon server (${error}). Periksa koneksi backend atau coba kembali.`
+                      : error}
+                  </Text>
+                  {/* 3. Fungsi Retry: Tombol Coba Lagi memicu kembali pemanggil API */}
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.retryButton,
+                      pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] },
+                    ]}
+                    onPress={loadApiData}
+                    accessibilityRole="button"
+                    accessibilityLabel="Coba Lagi memuat data transaksi"
+                  >
+                    <Ionicons name="reload-outline" size={15} color="#FFFFFF" />
+                    <Text style={styles.retryButtonText}>Coba Lagi</Text>
+                  </Pressable>
+                </View>
+              ) : displayTransactions.length > 0 ? (
+                /* 4. Tampilan Data Sukses: List Transaksi Terbaru DTO */
                 displayTransactions
                   .slice(0, 3)
                   .map((item, index) => (
@@ -437,14 +431,11 @@ export const HomeScreen: React.FC = () => {
                       }}
                     />
                   ))
-              )}
-
-              {!isLoadingApi && displayTransactions.length === 0 && (
+              ) : (
+                /* 5. Tampilan Kosong (tidak ada catatan transaksi) */
                 <View style={styles.emptyTransCard}>
                   <Text style={styles.emptyTransText}>
-                    {error
-                      ? `Gagal memuat data (${error}). Tarik layar ke bawah untuk mencoba lagi.`
-                      : "Belum ada catatan transaksi. Catat melalui menu Keuangan."}
+                    Belum ada catatan transaksi. Catat melalui menu Keuangan.
                   </Text>
                 </View>
               )}
@@ -628,6 +619,83 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     fontWeight: "600",
     color: Colors.primary,
+  },
+  loadingCard: {
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.lg,
+    paddingVertical: Spacing.xl,
+    paddingHorizontal: Spacing.lg,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#D5DBDB",
+    marginBottom: Spacing.md,
+  },
+  loadingText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: Colors.textPrimary,
+    marginTop: Spacing.sm,
+    textAlign: "center",
+  },
+  loadingSubtext: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginTop: 2,
+    textAlign: "center",
+  },
+  errorTransCard: {
+    backgroundColor: "#FFF8F8",
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    marginBottom: Spacing.md,
+  },
+  errorIconCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "#FEE2E2",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: Spacing.xs,
+  },
+  errorTitleText: {
+    fontSize: 13.5,
+    fontWeight: "700",
+    color: "#B91C1C",
+    marginBottom: 3,
+    textAlign: "center",
+  },
+  errorMessageText: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    textAlign: "center",
+    lineHeight: 16,
+    marginBottom: Spacing.md,
+    paddingHorizontal: Spacing.sm,
+  },
+  retryButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.primary,
+    paddingVertical: 8,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: BorderRadius.md,
+    gap: 6,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  retryButtonText: {
+    color: Colors.white,
+    fontSize: 12.5,
+    fontWeight: "700",
   },
   emptyTransCard: {
     backgroundColor: Colors.white,
