@@ -155,39 +155,33 @@ export const HomeScreen: React.FC = () => {
     return `Rp ${formatted},00`;
   };
 
-  // Hook useCallback untuk penanganan data lokal
-  const loadApiData = useCallback(async () => {
-    setLoading(false);
-    setErrorMessage(null);
-    setIsOffline(false);
-  }, []);
-
   // ============================================================================
   // 🌟 [KRITERIA 2 & 3]: Penggunaan Custom Async Function, .then(), .resolve(), .reject()
+  // Data dimuat secara asinkron di balik layar tanpa tombol pengujian di UI
   // ============================================================================
-  const runDemoAsyncWithThen = (forceFail: boolean = false) => {
+  const loadApiData = useCallback(() => {
     setLoading(true);
     setErrorMessage(null);
+    setIsOffline(false);
 
-    // Memanggil custom async function executePromiseDemoChaining dengan method chaining .then(), .catch(), .finally()
+    // Memanggil custom async function fetchWithCustomPromise (yang membungkus new Promise dengan resolve & reject)
+    // dan menangani hasilnya menggunakan method chaining .then(), .catch(), dan .finally()
     apiService
-      .executePromiseDemoChaining(forceFail)
+      .fetchWithCustomPromise()
       .then((data: TransactionDTO[]) => {
         // [KRITERIA 3]: .then() menangani pemenuhan Promise (resolve)
         setApiTransactions(data);
         setErrorMessage(null);
-        showFeedback(`✅ Sukses .then(): ${data.length} Object DTO dimuat via Promise.resolve()`);
       })
       .catch((err: Error) => {
         // [KRITERIA 3]: .catch() menangani penolakan Promise (reject)
         setApiTransactions([]);
-        setErrorMessage(err.message);
-        showFeedback(`⚠️ Tertangkap .catch(): ${err.message}`);
+        setErrorMessage(err.message || "Gagal memuat data transaksi.");
       })
       .finally(() => {
         setLoading(false);
       });
-  };
+  }, []);
 
   // Panggil loadApiData saat komponen pertama kali dimuat
   useEffect(() => {
@@ -410,49 +404,6 @@ export const HomeScreen: React.FC = () => {
             onPressIncome={() => router.push("/income" as any)}
             onPressExpense={() => router.push("/expense" as any)}
           />
-
-          {/* 🌟 [PEKAN DEMO]: Widget Uji Asynchronous & Promise (.then, .resolve, .reject) */}
-            <View style={styles.demoCard}>
-              <View style={styles.demoHeaderRow}>
-                <View style={styles.demoTag}>
-                  <Ionicons name="code-working-outline" size={14} color="#15803D" />
-                  <Text style={styles.demoTagText}>Tugas Pekan Demo (Async & Promise)</Text>
-                </View>
-                <Text style={styles.demoSubtag}>External API & DTO</Text>
-              </View>
-
-              <Text style={styles.demoDescription}>
-                Uji Custom Async Function dengan method chaining{" "}
-                <Text style={styles.boldCode}>.then()</Text>,{" "}
-                <Text style={styles.boldCode}>.resolve()</Text>, dan{" "}
-                <Text style={styles.boldCode}>.reject()</Text> yang dimasukkan ke dalam Object{" "}
-                <Text style={styles.boldCode}>TransactionDTO</Text>.
-              </Text>
-
-              <View style={styles.demoButtonsRow}>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.demoBtnSuccess,
-                    pressed && styles.pressedState,
-                  ]}
-                  onPress={() => runDemoAsyncWithThen(false)}
-                >
-                  <Ionicons name="checkmark-circle-outline" size={14} color="#FFFFFF" />
-                  <Text style={styles.demoBtnText}>Uji .then() & resolve()</Text>
-                </Pressable>
-
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.demoBtnDanger,
-                    pressed && styles.pressedState,
-                  ]}
-                  onPress={() => runDemoAsyncWithThen(true)}
-                >
-                  <Ionicons name="close-circle-outline" size={14} color="#FFFFFF" />
-                  <Text style={styles.demoBtnText}>Uji .reject()</Text>
-                </Pressable>
-              </View>
-            </View>
 
             {/* Riwayat Transaksi Terkini Section */}
             <View style={styles.recentTransactionsSection}>
@@ -1032,83 +983,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: BorderRadius.round,
-  },
-  
-  demoCard: {
-    backgroundColor: "#F0FDF4",
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
-    borderWidth: 1,
-    borderColor: "#BBF7D0",
-    marginBottom: Spacing.md,
-  },
-  demoHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 6,
-  },
-  demoTag: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  demoTagText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#15803D",
-  },
-  demoSubtag: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: "#166534",
-    backgroundColor: "#DCFCE7",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  demoDescription: {
-    fontSize: 11.5,
-    color: "#166534",
-    lineHeight: 16,
-    marginBottom: 10,
-  },
-  boldCode: {
-    fontWeight: "700",
-    fontFamily: Platform.select({ ios: "Courier", default: "monospace" }),
-    color: "#14532D",
-  },
-  demoButtonsRow: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  demoBtnSuccess: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    backgroundColor: "#16A34A",
-    paddingVertical: 8,
-    borderRadius: BorderRadius.md,
-  },
-  demoBtnDanger: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    backgroundColor: "#DC2626",
-    paddingVertical: 8,
-    borderRadius: BorderRadius.md,
-  },
-  demoBtnText: {
-    color: "#FFFFFF",
-    fontSize: 11.5,
-    fontWeight: "700",
-  },
-  pressedState: {
-    opacity: 0.7,
   },
 });
 
