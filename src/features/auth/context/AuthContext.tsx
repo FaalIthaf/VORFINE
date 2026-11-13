@@ -1,6 +1,3 @@
-import { Platform } from "react-native";
-import * as SecureStore from "expo-secure-store";
-import React, { createContext, useContext, useEffect, useState } from "react";
 import { User } from "@/types";
 import {
   deleteSecure,
@@ -8,6 +5,9 @@ import {
   saveSecureJSON,
   SECURE_KEYS,
 } from "@/utils/storage";
+import * as SecureStore from "expo-secure-store";
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { Platform } from "react-native";
 
 export interface RegisteredUser {
   email: string;
@@ -25,7 +25,7 @@ export interface AuthContextType {
   login: (
     emailOrUsername: string,
     password: string,
-    rememberMe?: boolean
+    rememberMe?: boolean,
   ) => Promise<{ success: boolean; message?: string }>;
   register: (data: {
     fullName: string;
@@ -39,11 +39,16 @@ export interface AuthContextType {
   verifyBiometric: (type: "face" | "fingerprint") => Promise<boolean>;
   toggleBiometrics: (enabled?: boolean) => Promise<void>;
   /** Instant switch — no re-login required */
-  switchAccount: (email: string) => Promise<{ success: boolean; message?: string }>;
+  switchAccount: (
+    email: string,
+  ) => Promise<{ success: boolean; message?: string }>;
   /** Forgot-password: look up account by email/username */
   findAccount: (emailOrUsername: string) => Promise<RegisteredUser | null>;
   /** Forgot-password: reset password for a given email */
-  resetPassword: (email: string, newPassword: string) => Promise<{ success: boolean; message?: string }>;
+  resetPassword: (
+    email: string,
+    newPassword: string,
+  ) => Promise<{ success: boolean; message?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -69,7 +74,7 @@ const DEFAULT_DEMO_USERS: RegisteredUser[] = [
   },
   {
     email: "ivanfadolli30@gmail.com",
-    password: "password123",
+    password: "ANJAYYY_",
     user: {
       id: "usr_ivan_02",
       fullName: "Ivan Fadolli",
@@ -111,13 +116,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [rememberMe, setRememberMe] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [hasRegisteredUsers, setHasRegisteredUsers] = useState<boolean>(true);
-  const [accessToken, setAccessToken] = useState<string | null>("vf_local_active");
+  const [accessToken, setAccessToken] = useState<string | null>(
+    "vf_local_active",
+  );
 
   // ─── Ambil daftar pengguna tersimpan dari Secure Storage lokal ────
   const getRegisteredUsers = async (): Promise<RegisteredUser[]> => {
     let users = await loadSecureJSON<RegisteredUser[]>(
       SECURE_KEYS.REGISTERED_USERS,
-      []
+      [],
     );
     if (!users || users.length === 0) {
       users = DEFAULT_DEMO_USERS;
@@ -128,7 +135,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // ─── Simpan pengguna ke Secure Storage lokal ───────────────────────
   const saveRegisteredUsers = async (
-    users: RegisteredUser[]
+    users: RegisteredUser[],
   ): Promise<void> => {
     await saveSecureJSON(SECURE_KEYS.REGISTERED_USERS, users);
   };
@@ -137,7 +144,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const saveSession = async (
     activeUser: User,
     remMe: boolean,
-    tokenString?: string | null
+    tokenString?: string | null,
   ): Promise<void> => {
     await saveSecureJSON(SECURE_KEYS.SESSION_TOKEN, {
       user: activeUser,
@@ -194,7 +201,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const login = async (
     emailOrUsername: string,
     password: string,
-    remMe: boolean = true
+    remMe: boolean = true,
   ): Promise<{ success: boolean; message?: string }> => {
     try {
       const trimmedInput = emailOrUsername.trim().toLowerCase();
@@ -209,13 +216,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       const matched = users.find(
         (u) =>
           u.email.toLowerCase() === trimmedInput ||
-          u.user.fullName.toLowerCase() === trimmedInput
+          u.user.fullName.toLowerCase() === trimmedInput,
       );
 
       if (!matched) {
         return {
           success: false,
-          message: "Akun belum terdaftar. Silakan klik 'Daftar Akun' terlebih dahulu.",
+          message:
+            "Akun belum terdaftar. Silakan klik 'Daftar Akun' terlebih dahulu.",
         };
       }
 
@@ -293,7 +301,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       if (existing) {
         return {
           success: false,
-          message: "Email sudah terdaftar. Silakan masuk menggunakan akun Anda.",
+          message:
+            "Email sudah terdaftar. Silakan masuk menggunakan akun Anda.",
         };
       }
 
@@ -357,12 +366,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // ─── Instant Account Switch (NO re-login!) ────────────────────────
   const switchAccount = async (
-    email: string
+    email: string,
   ): Promise<{ success: boolean; message?: string }> => {
     try {
       const registeredUsers = await getRegisteredUsers();
       const target = registeredUsers.find(
-        (u) => u.email.toLowerCase() === email.toLowerCase()
+        (u) => u.email.toLowerCase() === email.toLowerCase(),
       );
 
       if (!target) {
@@ -384,7 +393,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // ─── Find Account (for Forgot Password step 1) ────────────────────
   const findAccount = async (
-    emailOrUsername: string
+    emailOrUsername: string,
   ): Promise<RegisteredUser | null> => {
     try {
       const trimmed = emailOrUsername.trim().toLowerCase();
@@ -392,7 +401,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       const found = registeredUsers.find(
         (u) =>
           u.email.toLowerCase() === trimmed ||
-          u.user.fullName.toLowerCase() === trimmed
+          u.user.fullName.toLowerCase() === trimmed,
       );
       return found || null;
     } catch {
@@ -403,7 +412,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   // ─── Reset Password (for Forgot Password step 3) ──────────────────
   const resetPassword = async (
     email: string,
-    newPassword: string
+    newPassword: string,
   ): Promise<{ success: boolean; message?: string }> => {
     try {
       if (newPassword.length < 6) {
@@ -411,7 +420,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       }
       const registeredUsers = await getRegisteredUsers();
       const idx = registeredUsers.findIndex(
-        (u) => u.email.toLowerCase() === email.toLowerCase()
+        (u) => u.email.toLowerCase() === email.toLowerCase(),
       );
       if (idx === -1) {
         return { success: false, message: "Akun tidak ditemukan." };
@@ -455,7 +464,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   // ─── Biometrics ───────────────────────────────────────────────────
-  const verifyBiometric = async (_type: "face" | "fingerprint"): Promise<boolean> => {
+  const verifyBiometric = async (
+    _type: "face" | "fingerprint",
+  ): Promise<boolean> => {
     if (user) {
       setIsAuthenticated(true);
       await saveSession(user, true);
@@ -473,7 +484,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const updateRegisteredUser = async (updatedUser: User) => {
     const registeredUsers = await getRegisteredUsers();
     const updatedList = registeredUsers.map((ru) =>
-      ru.user.id === updatedUser.id ? { ...ru, user: updatedUser } : ru
+      ru.user.id === updatedUser.id ? { ...ru, user: updatedUser } : ru,
     );
     await saveRegisteredUsers(updatedList);
   };
