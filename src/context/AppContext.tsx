@@ -276,19 +276,46 @@ useEffect(() => {
         const schedKey = getAccountStorageKey(STORAGE_KEYS.SCHEDULES, accountId);
         const notifsKey = getAccountStorageKey(STORAGE_KEYS.NOTIFICATIONS, accountId);
 
-        const loadedProfiles = await loadData<Profile[]>(profilesKey, []);
+        let loadedProfiles = await loadData<Profile[]>(profilesKey, []);
         if (isCancelled) return;
 
-        const loadedSelected = await loadData<string>(selectedKey, "");
+        // Otomatis buat profil default '1' (Pribadi) jika belum ada profil
+        if (loadedProfiles.length === 0) {
+          const defaultProf: Profile = {
+            id: "1",
+            name: user.fullName || "Pribadi",
+            isCurrent: true,
+          };
+          loadedProfiles = [defaultProf];
+          await saveData(profilesKey, loadedProfiles);
+        }
+
+        const loadedSelected = await loadData<string>(selectedKey, "1");
         const loadedFinance = await loadData<Record<string, FinanceData>>(financeKey, {});
         const loadedTx = await loadData<Record<string, TransactionItem[]>>(txKey, {});
         const loadedSched = await loadData<Record<string, ScheduleItem[]>>(schedKey, {});
         const loadedNotifs = await loadData<Record<string, NotificationItem[]>>(notifsKey, {});
 
+        // Bersihkan data dummy 3.750.000 jika ada, mulai dari saldo 0
+        if (!loadedFinance["1"] || loadedFinance["1"].totalBalance === 3750000) {
+          const currentMonthName = INDONESIAN_MONTHS[new Date().getMonth()];
+          loadedFinance["1"] = createDefaultFinanceData(currentMonthName);
+          await saveData(financeKey, loadedFinance);
+        }
+
+        // Hapus transaksi sample jika ada
+        if (loadedTx["1"]) {
+          const filtered = loadedTx["1"].filter(
+            (t) => t.id !== "tx-sample-1" && t.id !== "tx-sample-2"
+          );
+          if (filtered.length !== loadedTx["1"].length) {
+            loadedTx["1"] = filtered;
+            await saveData(txKey, loadedTx);
+          }
+        }
+
         setProfiles(loadedProfiles);
-        setSelectedProfileId(
-          loadedSelected || (loadedProfiles.length > 0 ? loadedProfiles[0].id : "")
-        );
+        setSelectedProfileId(loadedSelected || "1");
         setFinanceByProfile(loadedFinance);
         setTransactionsByProfile(loadedTx);
         setSchedulesByProfile(loadedSched);

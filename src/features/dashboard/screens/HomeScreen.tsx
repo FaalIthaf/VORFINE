@@ -155,62 +155,11 @@ export const HomeScreen: React.FC = () => {
     return `Rp ${formatted},00`;
   };
 
-  // Hook useCallback untuk fungsi pemanggil API dengan penanganan Loading, Error, & Offline (Task 1, 2, 3)
+  // Hook useCallback untuk penanganan data lokal
   const loadApiData = useCallback(async () => {
-    try {
-      setLoading(true);
-      setErrorMessage(null);
-      setIsOffline(false);
-
-      // 1. Deteksi Koneksi Proaktif sebelum request (Task 3)
-      const isConnected = await apiService.checkConnection();
-      if (!isConnected) {
-        throw new TypeError("Failed to fetch: Perangkat dalam kondisi offline");
-      }
-
-      // 2. Panggil fungsi REST API transaksi VORFÍNE (Task 2)
-      const rawTransactions = await apiService.fetchTransactions();
-
-      // 3. Gunakan metode .map() untuk menyesuaikan field server agar cocok dengan struktur DTO (Task 1)
-      const mappedTransactions: TransactionDTO[] = rawTransactions.map(
-        (item: any) => ({
-          id: String(item.id),
-          title: item.title,
-          amount: Number(item.amount) || 0,
-          type: item.type === "income" ? "income" : "expense",
-          category: item.category || "Umum",
-          date: item.date,
-          description: item.description || item.title,
-          status: item.status || "completed",
-          balanceAfter: item.balanceAfter,
-        })
-      );
-
-      setApiTransactions(mappedTransactions);
-      setErrorMessage(null);
-      setIsOffline(false);
-    } catch (err: any) {
-      console.error("Gagal memuat data API pada Dashboard:", err);
-
-      // 1. Deteksi Koneksi / Penangkapan Error Jaringan (Task 3)
-      const isNetOffline = apiService.isNetworkError(err);
-      setIsOffline(isNetOffline);
-
-      if (isNetOffline) {
-        // 2. Tampilan Pesan Offline Khusus (Task 3)
-        setErrorMessage(
-          "Tidak ada koneksi internet. Periksa koneksi Anda dan coba lagi."
-        );
-      } else {
-        setErrorMessage(err?.message || "Terjadi kesalahan saat memuat data.");
-      }
-
-      // Sembunyikan data jika terjadi kegagalan (Task 2 & 3: data tidak ditampilkan saat error/offline)
-      setApiTransactions([]);
-    } finally {
-      // Pastikan setLoading(false) dijalankan di dalam blok finally agar tidak infinite loading
-      setLoading(false);
-    }
+    setLoading(false);
+    setErrorMessage(null);
+    setIsOffline(false);
   }, []);
 
   // ============================================================================
@@ -306,32 +255,10 @@ export const HomeScreen: React.FC = () => {
     }
   };
 
-  // 3. Mapping data transaksi murni keuangan pribadi VORFÍNE
+  // 3. Mapping data transaksi murni keuangan pribadi VORFÍNE (Hanya transaksi lokal user)
   const displayTransactions = useMemo(() => {
-    // Jika user sudah memiliki catatan transaksi pribadi, tampilkan transaksi user
-    if (transactions.length > 0) {
-      return transactions;
-    }
-
-    // Jika terjadi kegagalan (error !== null), sembunyikan data API (Task 2)
-    if (error !== null) {
-      return [];
-    }
-
-    // Jika belum ada data transaksi user, tampilkan data dinamis dari REST API VORFÍNE (Task 3)
-    return apiTransactions.map((t) => ({
-      id: `api-${t.id}`,
-      title: t.title,
-      note: t.description || t.category,
-      date: t.date,
-      amount: formatRupiah(t.amount),
-      balance: t.balanceAfter ? formatRupiah(t.balanceAfter) : "Saldo: Terkelola",
-      type: t.type,
-      numericAmount: t.amount,
-      rawDate: t.date,
-      timestamp: new Date(t.date).getTime() || Date.now(),
-    }));
-  }, [transactions, apiTransactions, error]);
+    return transactions;
+  }, [transactions]);
 
   // 5. Multi-Period calculations for Harian, Bulanan, and Tahunan
   const now = new Date();

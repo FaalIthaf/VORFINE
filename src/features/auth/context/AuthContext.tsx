@@ -1,6 +1,5 @@
 import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
-import { apiService } from "@/services";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { User } from "@/types";
 import {
@@ -49,32 +48,92 @@ export interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Akun bawaan agar pengguna & teman bisa langsung login tanpa perlu setup database server
+const DEFAULT_DEMO_USERS: RegisteredUser[] = [
+  {
+    email: "faalithaf@gmail.com",
+    password: "password123",
+    user: {
+      id: "usr_faal_01",
+      fullName: "FaalIthaf",
+      email: "faalithaf@gmail.com",
+      phone: "+62 812-3456-7890",
+      role: "Warga Terverifikasi",
+      avatar: "FA",
+      biometricsEnabled: true,
+      smartNotifications: true,
+      sensor3DActive: true,
+      encryptionStandard: "AES-256",
+      securitySessionActive: true,
+    },
+  },
+  {
+    email: "ivanfadolli30@gmail.com",
+    password: "password123",
+    user: {
+      id: "usr_ivan_02",
+      fullName: "Ivan Fadolli",
+      email: "ivanfadolli30@gmail.com",
+      phone: "+62 813-4567-8901",
+      role: "Warga Terverifikasi",
+      avatar: "IF",
+      biometricsEnabled: false,
+      smartNotifications: true,
+      sensor3DActive: false,
+      encryptionStandard: "AES-256",
+      securitySessionActive: true,
+    },
+  },
+  {
+    email: "demo@vorfine.com",
+    password: "password123",
+    user: {
+      id: "usr_demo_03",
+      fullName: "Demo User",
+      email: "demo@vorfine.com",
+      phone: "+62 812-0000-0000",
+      role: "Warga Terverifikasi",
+      avatar: "DU",
+      biometricsEnabled: false,
+      smartNotifications: true,
+      sensor3DActive: false,
+      encryptionStandard: "AES-256",
+      securitySessionActive: true,
+    },
+  },
+];
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [rememberMe, setRememberMe] = useState<boolean>(false);
+  const [rememberMe, setRememberMe] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [hasRegisteredUsers, setHasRegisteredUsers] = useState<boolean>(false);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [hasRegisteredUsers, setHasRegisteredUsers] = useState<boolean>(true);
+  const [accessToken, setAccessToken] = useState<string | null>("vf_local_active");
 
-  // ─── Get all registered users from Secure Storage ────────────────
+  // ─── Ambil daftar pengguna tersimpan dari Secure Storage lokal ────
   const getRegisteredUsers = async (): Promise<RegisteredUser[]> => {
-    return await loadSecureJSON<RegisteredUser[]>(
+    let users = await loadSecureJSON<RegisteredUser[]>(
       SECURE_KEYS.REGISTERED_USERS,
       []
     );
+    if (!users || users.length === 0) {
+      users = DEFAULT_DEMO_USERS;
+      await saveSecureJSON(SECURE_KEYS.REGISTERED_USERS, users);
+    }
+    return users;
   };
 
-  // ─── Save registered users list to Secure Storage ────────────────
+  // ─── Simpan pengguna ke Secure Storage lokal ───────────────────────
   const saveRegisteredUsers = async (
     users: RegisteredUser[]
   ): Promise<void> => {
     await saveSecureJSON(SECURE_KEYS.REGISTERED_USERS, users);
   };
 
-  // ─── Persist session to Secure Storage ────────────────────────────
+  // ─── Simpan sesi aktif ke Secure Storage lokal ────────────────────
   const saveSession = async (
     activeUser: User,
     remMe: boolean,
@@ -83,18 +142,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     await saveSecureJSON(SECURE_KEYS.SESSION_TOKEN, {
       user: activeUser,
       rememberMe: remMe,
-      token: tokenString || accessToken || "",
+      token: tokenString || accessToken || "vf_local_active",
     });
   };
 
-  // ─── Load saved session on mount (Task 3: Session Protection) ─────
+  // ─── Muat sesi tersimpan saat aplikasi dibuka ─────────────────────
   useEffect(() => {
     (async () => {
       try {
         const registeredUsers = await getRegisteredUsers();
         setHasRegisteredUsers(registeredUsers.length > 0);
 
-        // 1. Cek keberadaan access_token dari SecureStore
         let storedToken: string | null = null;
         try {
           storedToken = await SecureStore.getItemAsync("access_token");
@@ -103,31 +161,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             storedToken = window.localStorage.getItem("access_token");
           }
         }
-
-        // Validasi ketat token (JWT harus valid, buang token dummy lama)
-        const isValidToken =
-          Boolean(storedToken) &&
-          !storedToken?.startsWith("vf_token_") &&
-          !storedToken?.startsWith("vf_sec_");
-
-        if (!isValidToken) {
-          // Bersihkan sisa token dummy/tidak valid
-          try {
-            await SecureStore.deleteItemAsync("access_token");
-          } catch {}
-          if (Platform.OS === "web" && typeof window !== "undefined") {
-            window.localStorage.removeItem("access_token");
-          }
-          await deleteSecure(SECURE_KEYS.SESSION_TOKEN);
-          setUser(null);
-          setAccessToken(null);
-          setIsAuthenticated(false);
-          setIsLoading(false);
-          return;
-        }
-
-        // Token valid ada
-        setAccessToken(storedToken);
 
         const sessionData = await loadSecureJSON<{
           user: User;
@@ -139,20 +172,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           setUser(sessionData.user);
           setIsAuthenticated(true);
           setRememberMe(sessionData.rememberMe ?? true);
+          setAccessToken(sessionData.token || storedToken || "vf_local_active");
         } else {
-          // Jika tidak ada data user sesi yang sah, JANGAN gunakan fallback dummy user!
+          // Jika belum ada sesi, arahkan ke login (AuthGuard menangani redirect)
           setUser(null);
           setAccessToken(null);
           setIsAuthenticated(false);
-          try {
-            await SecureStore.deleteItemAsync("access_token");
-          } catch {}
-          if (Platform.OS === "web" && typeof window !== "undefined") {
-            window.localStorage.removeItem("access_token");
-          }
         }
       } catch (err) {
-        console.warn("Failed to load auth session from SecureStore:", err);
+        console.warn("Failed to load auth session from local storage:", err);
         setUser(null);
         setAccessToken(null);
         setIsAuthenticated(false);
@@ -162,7 +190,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     })();
   }, []);
 
-  // ─── Login (Task 1: Implement Token Authentication) ─────────────
+  // ─── Login Lokal (Cepat, 100% Offline tanpa server) ───────────────
   const login = async (
     emailOrUsername: string,
     password: string,
@@ -177,55 +205,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         };
       }
 
-      // 1. Verifikasi kredensial wajib ke server backend SQL
-      const loginResponse = await apiService.loginUser(emailOrUsername, password);
-      if (!loginResponse || !loginResponse.access_token || !loginResponse.user) {
-        setUser(null);
-        setAccessToken(null);
-        setIsAuthenticated(false);
+      const users = await getRegisteredUsers();
+      const matched = users.find(
+        (u) =>
+          u.email.toLowerCase() === trimmedInput ||
+          u.user.fullName.toLowerCase() === trimmedInput
+      );
+
+      if (!matched) {
         return {
           success: false,
-          message: "Email atau kata sandi salah. Silakan periksa kembali atau daftar akun baru.",
+          message: "Akun belum terdaftar. Silakan klik 'Daftar Akun' terlebih dahulu.",
         };
       }
 
-      const token = loginResponse.access_token;
-      setAccessToken(token);
+      if (matched.password !== password) {
+        return {
+          success: false,
+          message: "Kata sandi yang Anda masukkan salah.",
+        };
+      }
 
-      const activeUser: User = {
-        id: String(loginResponse.user.id),
-        fullName: loginResponse.user.fullName || emailOrUsername,
-        email: loginResponse.user.email || emailOrUsername,
-        phone: loginResponse.user.phone || "+62 812-xxxx-xxxx",
-        role: loginResponse.user.role || "Warga Terverifikasi",
-        avatar: (loginResponse.user.fullName?.slice(0, 2) || "VF").toUpperCase(),
-        biometricsEnabled: false,
-        smartNotifications: true,
-        sensor3DActive: false,
-        encryptionStandard: "AES-256",
-        securitySessionActive: true,
-      };
+      const localToken = `vf_local_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+      setAccessToken(localToken);
 
-      // 3. Manajemen State Sesi: set user & isAuthenticated = true
-      setUser(activeUser);
+      try {
+        await SecureStore.setItemAsync("access_token", localToken);
+      } catch {
+        if (Platform.OS === "web" && typeof window !== "undefined") {
+          window.localStorage.setItem("access_token", localToken);
+        }
+      }
+
+      setUser(matched.user);
       setIsAuthenticated(true);
       setRememberMe(remMe);
-      await saveSession(activeUser, remMe, token);
+      await saveSession(matched.user, remMe, localToken);
 
       return { success: true };
     } catch (err: any) {
       console.warn("Login error:", err);
-      setUser(null);
-      setAccessToken(null);
-      setIsAuthenticated(false);
       return {
         success: false,
-        message: err?.message || "Email atau kata sandi salah. Silakan daftar jika belum memiliki akun.",
+        message: err?.message || "Terjadi kesalahan saat masuk.",
       };
     }
   };
 
-  // ─── Register ─────────────────────────────────────────────────────
+  // ─── Register Lokal (Tersimpan aman di device masing-masing) ──────
   const register = async (data: {
     fullName: string;
     email: string;
@@ -253,37 +280,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         };
       }
 
-      const phoneClean = data.phone.replace(/[\s\-()]/g, "");
-      if (phoneClean.length > 0) {
-        const phoneRegex = /^(\+62|62|0)8[1-9][0-9]{7,10}$/;
-        if (!phoneRegex.test(phoneClean)) {
-          return {
-            success: false,
-            message:
-              "Format nomor HP tidak valid. Gunakan format Indonesia: +62 8xx-xxxx-xxxx",
-          };
-        }
-      }
-
-      if (data.password.length < 8) {
+      if (data.password.length < 6) {
         return {
           success: false,
-          message: "Kata sandi minimal harus 8 karakter.",
+          message: "Kata sandi minimal harus 6 karakter.",
         };
       }
 
-      // 1. Simpan akun ke database SQL melalui backend
-      const regResponse = await apiService.registerUser({
-        fullName: data.fullName.trim(),
-        email: data.email.trim().toLowerCase(),
-        phone: data.phone?.trim(),
-        password: data.password,
-      });
-
-      if (!regResponse || !regResponse.access_token || !regResponse.user) {
+      const users = await getRegisteredUsers();
+      const cleanEmail = data.email.trim().toLowerCase();
+      const existing = users.find((u) => u.email.toLowerCase() === cleanEmail);
+      if (existing) {
         return {
           success: false,
-          message: regResponse?.message || "Gagal membuat akun di server database.",
+          message: "Email sudah terdaftar. Silakan masuk menggunakan akun Anda.",
         };
       }
 
@@ -293,12 +303,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           ? (nameParts[0][0] + nameParts[1][0]).toUpperCase()
           : (data.fullName.slice(0, 2) || "VF").toUpperCase();
 
+      const newId = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
       const newUser: User = {
-        id: String(regResponse.user.id),
-        fullName: regResponse.user.fullName || data.fullName.trim(),
-        email: regResponse.user.email || data.email.trim().toLowerCase(),
+        id: newId,
+        fullName: data.fullName.trim(),
+        email: cleanEmail,
         phone: data.phone?.trim() || "+62 812-xxxx-xxxx",
-        role: regResponse.user.role || "Warga Terverifikasi",
+        role: "Warga Terverifikasi",
         avatar: initials,
         biometricsEnabled: false,
         smartNotifications: data.smartNotifications ?? true,
@@ -307,11 +318,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         securitySessionActive: true,
       };
 
-      const registeredUsers = await getRegisteredUsers();
       const updatedList: RegisteredUser[] = [
-        ...registeredUsers.filter(u => u.email.toLowerCase() !== data.email.trim().toLowerCase()),
+        ...users,
         {
-          email: data.email.trim().toLowerCase(),
+          email: cleanEmail,
           password: data.password,
           user: newUser,
         },
@@ -319,15 +329,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       await saveRegisteredUsers(updatedList);
       setHasRegisteredUsers(true);
 
+      const localToken = `vf_local_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+      setAccessToken(localToken);
+
+      try {
+        await SecureStore.setItemAsync("access_token", localToken);
+      } catch {
+        if (Platform.OS === "web" && typeof window !== "undefined") {
+          window.localStorage.setItem("access_token", localToken);
+        }
+      }
+
       setUser(newUser);
       setIsAuthenticated(true);
       setRememberMe(true);
-      setAccessToken(regResponse.access_token);
-      await saveSession(newUser, true, regResponse.access_token);
+      await saveSession(newUser, true, localToken);
+
       return { success: true };
     } catch (err: any) {
       console.warn("Register error:", err);
-      return { success: false, message: err?.message || "Terjadi kesalahan saat pendaftaran akun." };
+      return {
+        success: false,
+        message: err?.message || "Terjadi kesalahan saat pendaftaran akun.",
+      };
     }
   };
 
@@ -382,8 +406,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     newPassword: string
   ): Promise<{ success: boolean; message?: string }> => {
     try {
-      if (newPassword.length < 8) {
-        return { success: false, message: "Kata sandi minimal 8 karakter." };
+      if (newPassword.length < 6) {
+        return { success: false, message: "Kata sandi minimal 6 karakter." };
       }
       const registeredUsers = await getRegisteredUsers();
       const idx = registeredUsers.findIndex(
