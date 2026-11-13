@@ -53,64 +53,6 @@ export interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-<<<<<<< HEAD
-=======
-// Akun bawaan agar pengguna & teman bisa langsung login tanpa perlu setup database server
-const DEFAULT_DEMO_USERS: RegisteredUser[] = [
-  {
-    email: "faalithaf@gmail.com",
-    password: "password123",
-    user: {
-      id: "usr_faal_01",
-      fullName: "FaalIthaf",
-      email: "faalithaf@gmail.com",
-      phone: "+62 812-3456-7890",
-      role: "Warga Terverifikasi",
-      avatar: "FA",
-      biometricsEnabled: true,
-      smartNotifications: true,
-      sensor3DActive: true,
-      encryptionStandard: "AES-256",
-      securitySessionActive: true,
-    },
-  },
-  {
-    email: "ivanfadolli30@gmail.com",
-    password: "ANJAYYY_",
-    user: {
-      id: "usr_ivan_02",
-      fullName: "Ivan Fadolli",
-      email: "ivanfadolli30@gmail.com",
-      phone: "+62 813-4567-8901",
-      role: "Warga Terverifikasi",
-      avatar: "IF",
-      biometricsEnabled: false,
-      smartNotifications: true,
-      sensor3DActive: false,
-      encryptionStandard: "AES-256",
-      securitySessionActive: true,
-    },
-  },
-  {
-    email: "demo@vorfine.com",
-    password: "password123",
-    user: {
-      id: "usr_demo_03",
-      fullName: "Demo User",
-      email: "demo@vorfine.com",
-      phone: "+62 812-0000-0000",
-      role: "Warga Terverifikasi",
-      avatar: "DU",
-      biometricsEnabled: false,
-      smartNotifications: true,
-      sensor3DActive: false,
-      encryptionStandard: "AES-256",
-      securitySessionActive: true,
-    },
-  },
-];
-
->>>>>>> eb4d9a74a5160f00b1ececd697e977363aa44907
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -118,15 +60,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [rememberMe, setRememberMe] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-<<<<<<< HEAD
   const [hasRegisteredUsers, setHasRegisteredUsers] = useState<boolean>(false);
   const [accessToken, setAccessToken] = useState<string | null>("vf_local_active");
-=======
-  const [hasRegisteredUsers, setHasRegisteredUsers] = useState<boolean>(true);
-  const [accessToken, setAccessToken] = useState<string | null>(
-    "vf_local_active",
-  );
->>>>>>> eb4d9a74a5160f00b1ececd697e977363aa44907
 
   // ─── Ambil daftar pengguna tersimpan dari Secure Storage lokal ────
   const getRegisteredUsers = async (): Promise<RegisteredUser[]> => {

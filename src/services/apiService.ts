@@ -42,8 +42,9 @@ export const LOCAL_IP = "172.16.40.3";
  * Mengambil Base URL secara cerdas
  */
 export function getBaseUrl(): string {
-  if (TUNNEL_URL && TUNNEL_URL.trim() !== "") {
-    return TUNNEL_URL.trim().replace(/\/+$/, "");
+  const tunnel = String(TUNNEL_URL || "").trim();
+  if (tunnel !== "") {
+    return tunnel.replace(/\/+$/, "");
   }
 
   if (Platform.OS === "web" && typeof window !== "undefined") {
