@@ -48,61 +48,6 @@ export interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Akun bawaan agar pengguna & teman bisa langsung login tanpa perlu setup database server
-const DEFAULT_DEMO_USERS: RegisteredUser[] = [
-  {
-    email: "faalithaf@gmail.com",
-    password: "password123",
-    user: {
-      id: "usr_faal_01",
-      fullName: "FaalIthaf",
-      email: "faalithaf@gmail.com",
-      phone: "+62 812-3456-7890",
-      role: "Warga Terverifikasi",
-      avatar: "FA",
-      biometricsEnabled: true,
-      smartNotifications: true,
-      sensor3DActive: true,
-      encryptionStandard: "AES-256",
-      securitySessionActive: true,
-    },
-  },
-  {
-    email: "ivanfadolli30@gmail.com",
-    password: "password123",
-    user: {
-      id: "usr_ivan_02",
-      fullName: "Ivan Fadolli",
-      email: "ivanfadolli30@gmail.com",
-      phone: "+62 813-4567-8901",
-      role: "Warga Terverifikasi",
-      avatar: "IF",
-      biometricsEnabled: false,
-      smartNotifications: true,
-      sensor3DActive: false,
-      encryptionStandard: "AES-256",
-      securitySessionActive: true,
-    },
-  },
-  {
-    email: "demo@vorfine.com",
-    password: "password123",
-    user: {
-      id: "usr_demo_03",
-      fullName: "Demo User",
-      email: "demo@vorfine.com",
-      phone: "+62 812-0000-0000",
-      role: "Warga Terverifikasi",
-      avatar: "DU",
-      biometricsEnabled: false,
-      smartNotifications: true,
-      sensor3DActive: false,
-      encryptionStandard: "AES-256",
-      securitySessionActive: true,
-    },
-  },
-];
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -110,20 +55,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [rememberMe, setRememberMe] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [hasRegisteredUsers, setHasRegisteredUsers] = useState<boolean>(true);
+  const [hasRegisteredUsers, setHasRegisteredUsers] = useState<boolean>(false);
   const [accessToken, setAccessToken] = useState<string | null>("vf_local_active");
 
   // ─── Ambil daftar pengguna tersimpan dari Secure Storage lokal ────
   const getRegisteredUsers = async (): Promise<RegisteredUser[]> => {
-    let users = await loadSecureJSON<RegisteredUser[]>(
+    const users = await loadSecureJSON<RegisteredUser[]>(
       SECURE_KEYS.REGISTERED_USERS,
       []
     );
-    if (!users || users.length === 0) {
-      users = DEFAULT_DEMO_USERS;
-      await saveSecureJSON(SECURE_KEYS.REGISTERED_USERS, users);
-    }
-    return users;
+    return users || [];
   };
 
   // ─── Simpan pengguna ke Secure Storage lokal ───────────────────────
@@ -150,7 +91,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     (async () => {
       try {
-        const registeredUsers = await getRegisteredUsers();
+        let registeredUsers = await getRegisteredUsers();
+        // Bersihkan akun dummy bawaan yang sempat tersimpan sebelumnya
+        registeredUsers = registeredUsers.filter(
+          (u) =>
+            u.user.id !== "usr_demo_03" &&
+            u.email.toLowerCase() !== "demo@vorfine.com"
+        );
+        await saveRegisteredUsers(registeredUsers);
         setHasRegisteredUsers(registeredUsers.length > 0);
 
         let storedToken: string | null = null;
@@ -168,16 +116,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           token?: string;
         } | null>(SECURE_KEYS.SESSION_TOKEN, null);
 
-        if (sessionData && sessionData.user) {
+        if (
+          sessionData &&
+          sessionData.user &&
+          sessionData.user.id !== "usr_demo_03" &&
+          sessionData.user.email?.toLowerCase() !== "demo@vorfine.com"
+        ) {
           setUser(sessionData.user);
           setIsAuthenticated(true);
           setRememberMe(sessionData.rememberMe ?? true);
           setAccessToken(sessionData.token || storedToken || "vf_local_active");
         } else {
-          // Jika belum ada sesi, arahkan ke login (AuthGuard menangani redirect)
+          // Jika belum ada akun atau akun demo lama, reset ke bersih (halaman login)
           setUser(null);
           setAccessToken(null);
           setIsAuthenticated(false);
+          await deleteSecure(SECURE_KEYS.SESSION_TOKEN);
         }
       } catch (err) {
         console.warn("Failed to load auth session from local storage:", err);

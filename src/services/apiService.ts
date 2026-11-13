@@ -2,7 +2,7 @@
  * REST API Service untuk VORFÍNE
  * Bertanggung jawab melakukan permintaan HTTP asinkron (GET/POST) ke server,
  * autentikasi berbasis token dengan SecureStore,
- * serta menyertakan Authorization Bearer token pada protected endpoint.
+ * serta integrasi DummyJSON API untuk Modul 3.
  */
 
 import * as SecureStore from "expo-secure-store";
@@ -15,21 +15,37 @@ import {
   ExternalDemoDTO,
 } from "../models";
 
-// 1. URL Tunnel Publik (Jika teman beda jaringan, isi URL dari localtunnel / ngrok di sini)
-// Kosongkan string ("") jika Anda menjalankan di laptop sendiri atau Wi-Fi yang sama!
-export const TUNNEL_URL = "";
+// ============================================================================
+// 🌟 ENDPOINTS DUMMYJSON KUSTOM (MODUL 3)
+// ============================================================================
+export const DUMMY_GET_URL = "https://dummyjson.com/c/7658-7caa-4cfd-8233";
+export const DUMMY_POST_URL = "https://dummyjson.com/c/718b-cf8c-495a-a66f";
+
+export interface Modul3UserDTO {
+  id?: string | number;
+  username: string;
+  email: string;
+  fullName?: string;
+  phone?: string;
+  role?: string;
+  balance?: number;
+  raw?: any;
+}
+
+// 1. URL Tunnel Publik (Opsional jika menggunakan backend remote)
+export const TUNNEL_URL: string = "";
 
 // 2. IP Laptop Server di Jaringan Wi-Fi Lokal
-export const LOCAL_IP = "192.168.1.3";
+export const LOCAL_IP = "172.16.40.3";
 
 /**
- * Mengambil Base URL secara cerdas:
- * - Jika TUNNEL_URL diisi: semua perangkat memakai tunnel online.
- * - Jika TUNNEL_URL kosong (""):
- *   - Di Browser/Web: otomatis mengikuti hostname (`http://${host}:5000`)
- *   - Di Android/HP: mengarah ke IP Wi-Fi laptop (`http://${LOCAL_IP}:5000`)
+ * Mengambil Base URL secara cerdas
  */
 export function getBaseUrl(): string {
+  if (TUNNEL_URL && TUNNEL_URL.trim() !== "") {
+    return TUNNEL_URL.trim().replace(/\/+$/, "");
+  }
+
   if (Platform.OS === "web" && typeof window !== "undefined") {
     const host = window.location.hostname || "localhost";
     return `http://${host}:5000`;
@@ -41,30 +57,38 @@ export function getBaseUrl(): string {
 export const BASE_URL = getBaseUrl();
 
 /**
- * Helper aman untuk parsing response JSON dari server.
- * Mencegah error "no digit after minus sign" jika server mengembalikan pesan error teks/HTML (misal 502/503 tunnel mati).
+ * Helper aman untuk parsing response JSON dari server
  */
 async function parseJsonResponse(response: Response): Promise<any> {
-  // 1. Periksa Response: Pengecekan response.ok sebelum parsing data JSON
-  if (!response.ok) {
-    throw new Error("HTTP " + response.status);
-  }
-
   const text = await response.text();
-  let json: any;
+  let json: any = null;
   try {
     json = JSON.parse(text);
   } catch {
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
     throw new Error(
       "Respons dari server bukan format JSON yang valid. Pastikan server backend dan tunnel aktif."
     );
+  }
+
+  if (!response.ok) {
+    const msg =
+      json?.message ||
+      (response.status === 401
+        ? "Email atau kata sandi salah / Sesi tidak valid (401)"
+        : `HTTP ${response.status}`);
+    const err = new Error(msg);
+    (err as any).status = response.status;
+    throw err;
   }
 
   return json;
 }
 
 /**
- * Memeriksa status koneksi internet perangkat secara proaktif (Task 3)
+ * Memeriksa status koneksi internet perangkat secara proaktif
  */
 export async function checkConnection(): Promise<boolean> {
   if (typeof navigator !== "undefined" && typeof navigator.onLine === "boolean") {
@@ -74,7 +98,7 @@ export async function checkConnection(): Promise<boolean> {
 }
 
 /**
- * Mendeteksi apakah error yang ditangkap merupakan kegagalan jaringan atau kondisi offline (Task 3)
+ * Mendeteksi apakah error yang ditangkap merupakan kegagalan jaringan atau kondisi offline
  */
 export function isNetworkError(error: any): boolean {
   if (typeof navigator !== "undefined" && typeof navigator.onLine === "boolean" && !navigator.onLine) {
@@ -102,10 +126,213 @@ export function isNetworkError(error: any): boolean {
 }
 
 /**
- * Helper generik untuk melakukan HTTP GET request menggunakan fetch() (Task 2)
- * Mengambil token dari SecureStore dan menyertakannya di dalam header HTTP:
- * Authorization: Bearer <token>
+ * ============================================================================
+ * 🚀 FUNGSI API DUMMYJSON KUSTOM (PERSIAPAN MODUL 3)
+ * ============================================================================
  */
+
+/**
+ * 1. Fetch data dari Custom GET Endpoint DummyJSON
+ * Endpoint: https://dummyjson.com/c/3029-d29f-4014-9fb4
+ */
+export async function fetchCustomDummyGet<T = any>(): Promise<T> {
+  try {
+    const response = await fetch(DUMMY_GET_URL, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP Error GET DummyJSON: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (err: any) {
+    console.error("[apiService] Error saat memanggil fetchCustomDummyGet:", err);
+    throw err;
+  }
+}
+
+/**
+ * 2. Kirim data ke Custom POST Endpoint DummyJSON
+ * Endpoint: https://dummyjson.com/c/eb3d-d728-4cdf-ab19
+ */
+export async function postCustomDummyData<T = any>(payload: any): Promise<T> {
+  try {
+    const response = await fetch(DUMMY_POST_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP Error POST DummyJSON: ${response.status}`);
+    }
+
+    const text = await response.text();
+    try {
+      return JSON.parse(text);
+    } catch {
+      return { success: true, message: "Data berhasil dikirim ke endpoint DummyJSON POST" } as any;
+    }
+  } catch (err: any) {
+    console.error("[apiService] Error saat memanggil postCustomDummyData:", err);
+    throw err;
+  }
+}
+
+/**
+ * 3. Helper Khusus Modul 3: Fetch Username & Email Address
+ * Mengambil data dari endpoint GET DummyJSON dan mengekstraksi username & email
+ * Siap dipakai di halaman baru Modul 3
+ */
+export async function fetchUserCredentials(): Promise<Modul3UserDTO> {
+  try {
+    const data = await fetchCustomDummyGet<any>();
+    const username =
+      data?.username || data?.user || (data?.foo ? String(data.foo) : "pengguna_vorfine");
+    const email =
+      data?.email || (data?.foo ? `${data.foo}@vorfine.com` : "pengguna@vorfine.com");
+
+    return {
+      id: data?.id || 1,
+      username,
+      email,
+      fullName: data?.fullName || data?.name || username,
+      phone: data?.phone || "+62 812-xxxx-xxxx",
+      role: data?.role || "Warga Terverifikasi",
+      balance: Number(data?.balance) || 0,
+      raw: data,
+    };
+  } catch (err: any) {
+    console.error("[apiService] Error fetchUserCredentials:", err);
+    throw err;
+  }
+}
+
+/**
+ * ============================================================================
+ * 🌟 PEKAN DEMO: ASYNCHRONOUS & PROMISE (.then, .resolve, .reject)
+ * ============================================================================
+ */
+
+/**
+ * Mengambil data transaksi eksternal dari endpoint DummyJSON kustom
+ */
+export async function fetchExternalApiTransactions(): Promise<TransactionDTO[]> {
+  try {
+    const data = await fetchCustomDummyGet<any>();
+    const items = Array.isArray(data?.items)
+      ? data.items
+      : Array.isArray(data)
+      ? data
+      : [data];
+
+    return items.map((item: any, idx: number): TransactionDTO => ({
+      id: `ext-${item.id || idx + 1}`,
+      title: item.title || item.username || item.foo || `Transaksi External #${idx + 1}`,
+      amount: Number(item.amount) || 100000,
+      type: (item.type === "income" ? "income" : "expense") as "income" | "expense",
+      category: item.category || "Modul 3 API",
+      date: new Date().toISOString().split("T")[0],
+      description: `Data dari Custom DummyJSON API (GET)`,
+      status: "completed",
+      balanceAfter: 1000000,
+    }));
+  } catch (error) {
+    console.warn("[apiService] Fallback fetchExternalApiTransactions:", error);
+    return [];
+  }
+}
+
+/**
+ * Custom Promise Wrapper dengan resolve() dan reject()
+ */
+export function fetchWithCustomPromise(
+  endpointUrl: string = DUMMY_GET_URL
+): Promise<TransactionDTO[]> {
+  return new Promise<TransactionDTO[]>((resolve, reject) => {
+    if (!endpointUrl || typeof endpointUrl !== "string" || endpointUrl.trim() === "") {
+      return reject(new Error("[Pekan Demo - reject()]: Parameter endpointUrl tidak boleh kosong!"));
+    }
+
+    fetch(endpointUrl, {
+      headers: { "Accept": "application/json" }
+    })
+      .then((res: Response) => {
+        if (!res.ok) {
+          return reject(
+            new Error(`[Pekan Demo - reject()]: Server mengembalikan status HTTP ${res.status}`)
+          );
+        }
+        return res.json();
+      })
+      .then((data: any) => {
+        const rawList = Array.isArray(data?.items)
+          ? data.items
+          : Array.isArray(data)
+          ? data
+          : [data];
+
+        const mappedObjects: TransactionDTO[] = rawList.map(
+          (item: any, i: number): TransactionDTO => ({
+            id: String(item.id || i + 1),
+            title: item.title || item.username || (item.foo ? `Item: ${item.foo}` : `Data Demo #${i + 1}`),
+            amount: 150000 * (i + 1),
+            type: i % 2 === 0 ? "income" : "expense",
+            category: "DummyJSON Modul 3",
+            date: new Date().toISOString().split("T")[0],
+            description: "Data sukses diselesaikan melalui custom Promise resolve()",
+            status: "completed",
+            balanceAfter: 2000000,
+          })
+        );
+
+        resolve(mappedObjects);
+      })
+      .catch((err: any) => {
+        reject(
+          new Error(`[Pekan Demo - reject()]: Gagal mengambil data: ${err?.message || err}`)
+        );
+      });
+  });
+}
+
+/**
+ * Demonstrasi Chaining .then(), .catch() dengan Promise.resolve() dan Promise.reject()
+ */
+export function executePromiseDemoChaining(
+  simulateFailure: boolean = false
+): Promise<TransactionDTO[]> {
+  if (simulateFailure) {
+    return Promise.reject(
+      new Error("[Pekan Demo - Promise.reject()]: Simulasi kegagalan paksa berhasil dieksekusi!")
+    );
+  }
+
+  return fetchWithCustomPromise(DUMMY_GET_URL)
+    .then((resultList: TransactionDTO[]) => {
+      console.log("[Pekan Demo - .then()]: Data berhasil diterima dari DummyJSON:", resultList.length);
+      return Promise.resolve(resultList);
+    })
+    .catch((err: Error) => {
+      console.error("[Pekan Demo - .catch()]: Error ditangkap:", err.message);
+      return Promise.reject(err);
+    });
+}
+
+/**
+ * ============================================================================
+ * 🌟 GENERIC & BACKEND HELPERS
+ * ============================================================================
+ */
+
 export async function getFromApi<T>(endpoint: string): Promise<T> {
   try {
     const base = getBaseUrl();
@@ -113,7 +340,6 @@ export async function getFromApi<T>(endpoint: string): Promise<T> {
       ? endpoint
       : `${base}${endpoint.startsWith("/") ? "" : "/"}${endpoint}`;
 
-    // 1. Ambil Token dari SecureStore (Task 2: Attach Token)
     let token: string | null = null;
     try {
       token = await SecureStore.getItemAsync("access_token");
@@ -123,7 +349,6 @@ export async function getFromApi<T>(endpoint: string): Promise<T> {
       }
     }
 
-    // 2. Sertakan Header Authorization: Bearer <token>
     const response = await fetch(url, {
       method: "GET",
       headers: {
@@ -136,11 +361,6 @@ export async function getFromApi<T>(endpoint: string): Promise<T> {
       },
     });
 
-    // 1. Periksa Response: Tambahkan pengecekan if (!response.ok) { throw new Error('HTTP ' + response.status); } sebelum memparsing data JSON
-    if (!response.ok) {
-      throw new Error("HTTP " + response.status);
-    }
-
     return await parseJsonResponse(response);
   } catch (error) {
     console.error(`[apiService] Gagal fetch data dari ${endpoint}:`, error);
@@ -148,10 +368,6 @@ export async function getFromApi<T>(endpoint: string): Promise<T> {
   }
 }
 
-/**
- * 1. Mengambil data Kategori Anggaran / Program Finansial (ProgramDTO[])
- * Backend SQL mengembalikan array langsung dari tabel programs
- */
 export async function fetchPrograms(): Promise<ProgramDTO[]> {
   try {
     const data = await getFromApi<any[]>("/programs");
@@ -168,23 +384,14 @@ export async function fetchPrograms(): Promise<ProgramDTO[]> {
       progress: parseInt(item.progress) || 0,
     }));
   } catch (error) {
-    console.error("[apiService] Error saat memuat fetchPrograms:", error);
-    throw error;
+    return [];
   }
 }
 
-/**
- * 2. Mengambil data Transaksi Keuangan (TransactionDTO[])
- * Backend SQL mengembalikan array langsung dari tabel transactions
- */
 export async function fetchTransactions(): Promise<TransactionDTO[]> {
   try {
     const data = await getFromApi<any[]>("/transactions");
     const list = Array.isArray(data) ? data : [];
-    if (list.length === 0) {
-      // Jika database lokal masih kosong, ambil data dari External API
-      return await fetchExternalApiTransactions();
-    }
     return list.map((item: any): TransactionDTO => ({
       id: String(item.id),
       title: item.title || "",
@@ -197,16 +404,10 @@ export async function fetchTransactions(): Promise<TransactionDTO[]> {
       balanceAfter: parseFloat(item.balanceAfter) || 0,
     }));
   } catch (error) {
-    console.warn("[apiService] Gagal menghubungi backend lokal, otomatis fallback ke External API:", error);
-    // [Kriteria 1 & 2]: Fallback ke External API agar demo tidak gagal saat server lokal mati
-    return await fetchExternalApiTransactions();
+    return [];
   }
 }
 
-/**
- * 3. Mengambil data Aktivitas & Jadwal Harian (ActivityDTO[])
- * Backend SQL mengembalikan array langsung dari tabel activities
- */
 export async function fetchActivities(): Promise<ActivityDTO[]> {
   try {
     const data = await getFromApi<any[]>("/activities");
@@ -222,16 +423,10 @@ export async function fetchActivities(): Promise<ActivityDTO[]> {
       reminderEnabled: Boolean(item.reminderEnabled),
     }));
   } catch (error) {
-    console.error("[apiService] Error saat memuat fetchActivities:", error);
-    throw error;
+    return [];
   }
 }
 
-/**
- * 4. Implementasi Fungsi Login (Task 1: Token Authentication)
- * Melakukan HTTP POST ke endpoint /auth/login dengan parameter email dan password.
- * TIDAK ADA FALLBACK — jika server tidak jalan atau kredensial salah, login GAGAL.
- */
 export async function loginUser(
   email: string,
   password: string,
@@ -250,14 +445,8 @@ export async function loginUser(
     body: JSON.stringify({ email, password }),
   });
 
-  // Periksa Response: Pengecekan response.ok sebelum parsing JSON
-  if (!response.ok) {
-    throw new Error("HTTP " + response.status);
-  }
-
   const data: LoginResponseDTO = await parseJsonResponse(response);
 
-  // Pastikan access_token tersimpan secara aman di SecureStore
   if (data && data.access_token) {
     try {
       await SecureStore.setItemAsync("access_token", data.access_token);
@@ -271,9 +460,6 @@ export async function loginUser(
   return data;
 }
 
-/**
- * Mengambil token autentikasi (access_token) yang tersimpan di SecureStore
- */
 export async function getStoredAccessToken(): Promise<string | null> {
   try {
     return await SecureStore.getItemAsync("access_token");
@@ -285,9 +471,6 @@ export async function getStoredAccessToken(): Promise<string | null> {
   }
 }
 
-/**
- * Menghapus token autentikasi (access_token) dari SecureStore saat user logout
- */
 export async function removeStoredAccessToken(): Promise<void> {
   try {
     await SecureStore.deleteItemAsync("access_token");
@@ -298,9 +481,6 @@ export async function removeStoredAccessToken(): Promise<void> {
   }
 }
 
-/**
- * Registrasi User Baru ke Backend SQL
- */
 export async function registerUser(payload: {
   fullName: string;
   email: string;
@@ -320,11 +500,6 @@ export async function registerUser(payload: {
     body: JSON.stringify(payload),
   });
 
-  // Periksa Response: Pengecekan response.ok sebelum parsing JSON
-  if (!response.ok) {
-    throw new Error("HTTP " + response.status);
-  }
-
   const data: LoginResponseDTO = await parseJsonResponse(response);
 
   if (data && data.access_token) {
@@ -340,147 +515,15 @@ export async function registerUser(payload: {
   return data;
 }
 
-
-// ============================================================================
-// 🌟 TUGAS PEKAN DEMO: ASYNCHRONOUS, PROMISE (.then, .resolve, .reject) & DTO
-// ============================================================================
-
-/**
- * [KRITERIA 1 & 2]: Mengambil data dari External API & Custom Async Function
- * - External API: https://dummyjson.com/todos?limit=6 (API publik online terpercaya)
- * - Pre-built Async Function: fetch(), response.json()
- * - Custom Async Function: fetchExternalApiTransactions()
- * - Object Interface: Memasukkan hasil parsing ke dalam Object bertipe TransactionDTO[]
- */
-export async function fetchExternalApiTransactions(): Promise<TransactionDTO[]> {
-  const EXTERNAL_URL = "https://dummyjson.com/todos?limit=6";
-
-  // Pre-built Async Function: fetch()
-  const response = await fetch(EXTERNAL_URL, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-  });
-
-  if (!response.ok) {
-    throw new Error(`HTTP Error saat memanggil External API: ${response.status}`);
-  }
-
-  // Pre-built Async Function: response.json()
-  const json = await response.json();
-  const todos = Array.isArray(json?.todos) ? json.todos : [];
-
-  const categories = ["Gaji", "Belanja", "Tagihan", "Freelance", "Konsumsi", "Investasi"];
-  const amounts = [5000000, 350000, 420000, 1500000, 75000, 2000000];
-
-  // Memasukkan data ke dalam Object menggunakan Interface (TransactionDTO)
-  const mappedList: TransactionDTO[] = todos.map((item: any, idx: number): TransactionDTO => {
-    const isIncome = idx % 3 === 0;
-    return {
-      id: `ext-${item.id || idx + 1}`,
-      title: item.todo || `Transaksi External #${idx + 1}`,
-      amount: amounts[idx % amounts.length],
-      type: isIncome ? "income" : "expense",
-      category: categories[idx % categories.length],
-      date: new Date(Date.now() - idx * 86400000).toISOString().split("T")[0],
-      description: `Data External API DummyJSON (ID: ${item.id})`,
-      status: item.completed ? "completed" : "pending",
-      balanceAfter: isIncome ? 8500000 : 4200000,
-    };
-  });
-
-  return mappedList;
-}
-
-/**
- * [KRITERIA 3]: Menggunakan fungsi new Promise(), .resolve(), dan .reject()
- * - Membungkus proses asinkron ke dalam Promise buatan sendiri
- * - Memanggil resolve(data) jika operasi berhasil
- * - Memanggil reject(error) jika parameter tidak valid atau HTTP status bukan 200
- */
-export function fetchWithCustomPromise(
-  endpointUrl: string = "https://dummyjson.com/todos?limit=6"
-): Promise<TransactionDTO[]> {
-  return new Promise<TransactionDTO[]>((resolve, reject) => {
-    // Demonstrasi pemanggilan reject() saat validasi gagal
-    if (!endpointUrl || typeof endpointUrl !== "string" || endpointUrl.trim() === "") {
-      return reject(new Error("[Pekan Demo - reject()]: Parameter endpointUrl tidak boleh kosong!"));
-    }
-
-    // Pre-built Async Fetch dipadukan dengan chaining .then() dan .catch()
-    fetch(endpointUrl)
-      .then((res: Response) => {
-        if (!res.ok) {
-          // Demonstrasi reject() pada status error HTTP
-          return reject(
-            new Error(`[Pekan Demo - reject()]: Server mengembalikan status HTTP ${res.status}`)
-          );
-        }
-        return res.json();
-      })
-      .then((data: any) => {
-        const rawList = Array.isArray(data?.todos)
-          ? data.todos
-          : Array.isArray(data)
-          ? data
-          : [];
-
-        // Pemetaan data mentah ke Object menggunakan Interface TransactionDTO
-        const mappedObjects: TransactionDTO[] = rawList.map(
-          (item: any, i: number): TransactionDTO => ({
-            id: String(item.id || i + 1),
-            title: item.todo || item.title || `Transaksi Demo #${i + 1}`,
-            amount: 250000 * (i + 1),
-            type: i % 2 === 0 ? "income" : "expense",
-            category: "Demo Asinkron",
-            date: new Date().toISOString().split("T")[0],
-            description: "Data sukses diselesaikan melalui custom Promise resolve()",
-            status: "completed",
-            balanceAfter: 5000000,
-          })
-        );
-
-        // Demonstrasi pemanggilan resolve() saat data berhasil diproses
-        resolve(mappedObjects);
-      })
-      .catch((err: any) => {
-        // Demonstrasi pemanggilan reject() saat terjadi exception jaringan
-        reject(
-          new Error(`[Pekan Demo - reject()]: Gagal mengambil data: ${err?.message || err}`)
-        );
-      });
-  });
-}
-
-/**
- * [KRITERIA 3]: Menggunakan fungsi .then(), .resolve(), dan .reject() secara eksplisit
- * - Menangani pemenuhan Promise menggunakan .then()
- * - Mengembalikan Promise.resolve() dan Promise.reject() secara eksplisit
- */
-export function executePromiseDemoChaining(
-  simulateFailure: boolean = false
-): Promise<TransactionDTO[]> {
-  // Jika penguji meminta demonstrasi Promise.reject() eksplisit:
-  if (simulateFailure) {
-    return Promise.reject(
-      new Error("[Pekan Demo - Promise.reject()]: Simulasi kegagalan paksa berhasil dieksekusi!")
-    );
-  }
-
-  // Demonstrasi pemanggilan Custom Async Function dengan .then() dan .catch()
-  return fetchWithCustomPromise()
-    .then((resultList: TransactionDTO[]) => {
-      console.log("[Pekan Demo - .then()]: Data berhasil diterima:", resultList.length);
-      // Demonstrasi eksplisit Promise.resolve()
-      return Promise.resolve(resultList);
-    })
-    .catch((err: Error) => {
-      console.error("[Pekan Demo - .catch()]: Error ditangkap:", err.message);
-      // Demonstrasi eksplisit Promise.reject()
-      return Promise.reject(err);
-    });
-}
-
 export const apiService = {
+  DUMMY_GET_URL,
+  DUMMY_POST_URL,
+  fetchCustomDummyGet,
+  postCustomDummyData,
+  fetchUserCredentials,
+  fetchExternalApiTransactions,
+  fetchWithCustomPromise,
+  executePromiseDemoChaining,
   getFromApi,
   fetchPrograms,
   fetchTransactions,
@@ -491,10 +534,6 @@ export const apiService = {
   removeStoredAccessToken,
   checkConnection,
   isNetworkError,
-  // Tugas Pekan Demo
-  fetchExternalApiTransactions,
-  fetchWithCustomPromise,
-  executePromiseDemoChaining,
 };
 
 export default apiService;
